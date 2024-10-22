@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Swasti Bharat",
+    "slug": "Swasti_Bharat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/swasti_bharat.png",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "versionCode": 3,
+      "package": "com.bharatswasti",
+      "config": {
+        "googleMaps": {
+          "apiKey": "<android maps key>"
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "aedf00bb-5f36-4255-8e70-d01246ff4aea"
+      }
+    }
+  }
+}
