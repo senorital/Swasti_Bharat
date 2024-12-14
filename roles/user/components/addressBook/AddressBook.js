@@ -24,11 +24,13 @@ import Button from "../../../../components/button/Button";
 import { COLORS, icons } from "../../../../components/constants";
 import CustomAlertModal from "../../../../components/CustomAlert/CustomAlertModal";
 import { FONTS } from "../../../../components/constants/theme";
-import { getAddress } from "../../../../redux/actions/user/addressBook/addressBook";
+import { deleteAddress, getAddress } from "../../../../redux/actions/user/addressBook/addressBook";
 import AddNewAddress from "./AddNewAddress";
 import EditAddress from "./EditAddress";
 import { useNavigation } from "@react-navigation/native";
 import { useFocusEffect } from '@react-navigation/native';
+import LocateAddress from "./LocateAddress";
+import ShimmerPlaceHolder from "react-native-shimmer-placeholder";
 
 
 
@@ -47,7 +49,7 @@ const AddressBook = () => {
   const [errorMsg, setErrorMsg] = useState(null);
   const [address, setAddress] = useState(null);
   const [loading1, setLoading1] = useState(false);
-  const [addresses, setAddresses] = useState([]); // State to store the fetched addresses
+  const [addresses, setAddresses] = useState([]); 
 
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -55,15 +57,25 @@ const AddressBook = () => {
   const [boldText, setBoldText] = useState('');
   const navigation = useNavigation();
 
+  const renderShimmer = () => {
+    return (
+      <ShimmerPlaceHolder
+        style={styles.shimmerCard}
+        autoRun={true}
+        width={wp("90%")}
+        height={hp("15%")}
+      />
+    );
+  };
 
   useEffect(() => {
     const handleBackPress = () => {
       if (navigation.isFocused()) {
-        // Check if the current screen is focused
-        navigation.goBack(); // Go back if the current screen is focused
-        return true; // Prevent default behavior (exiting the app)
+        
+        navigation.goBack(); 
+        return true; 
       }
-      return false; // If not focused, allow default behavior (exit the app)
+      return false; 
     };
 
     BackHandler.addEventListener("hardwareBackPress", handleBackPress);
@@ -76,15 +88,20 @@ const AddressBook = () => {
  
   const fetchData = async () => {
     try {
+      setLoading(true);  // Show shimmer before data fetching
       const res = await dispatch(getAddress());  // Fetch the address data from API
-      console.log("User Response: ", res);
       if (res.success) {
-        setAddresses(res.data);  // Save the addresses to the state
+        setAddresses(res?.data);  // Save the addresses to the state
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       const msg = error.response?.data?.message;
       ToastAndroid.show(msg || 'An error occurred. Please try again.', ToastAndroid.SHORT);
+      setLoading(false); 
+
+    }
+    finally{
+    setLoading(false); 
     }
   };
 
@@ -95,16 +112,13 @@ const AddressBook = () => {
     }, [])
   );
 
-
-  // console.log(user);
-
   useEffect(() => {
 fetchData();
 }, [dispatch]);
 
 
 const handlenewPress = () => {
-navigation.navigate(AddNewAddress);
+navigation.navigate(LocateAddress);
 
 }
  
@@ -115,18 +129,7 @@ const AddressCard = ({ title, address,id }) => {
         message: `Address: ${title} - ${address}`, // Format the message with the title and address
       });
 
-      if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          // Shared with activity type of result.activityType
-          console.log("Shared with activity type: ", result.activityType);
-        } else {
-          // Shared successfully
-          console.log("Address shared successfully!");
-        }
-      } else if (result.action === Share.dismissedAction) {
-        // Dismissed
-        console.log("Share dismissed.");
-      }
+   
     } catch (error) {
       console.error("Error sharing the address:", error.message);
     }
@@ -134,6 +137,29 @@ const AddressCard = ({ title, address,id }) => {
 
   const handleEdit = () => {
     navigation.navigate('EditAddress', { id: id });
+  };
+
+
+
+  const handleDeletePress = () => {
+    handleDelete(id);  // Call handleDelete with the correct address ID
+  };
+
+  const handleDelete = async (id) => {
+    try {
+
+      const res = await dispatch(deleteAddress(id));
+  
+      if (res && res.success) {
+        // Show a toast message using ToastAndroid
+        ToastAndroid.show(res?.message, ToastAndroid.SHORT);
+        fetchData(); 
+      }
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      const msg = error.res?.data?.message || "An error occurred. Please try again.";
+     ToastAndroid.show(msg, ToastAndroid.SHORT);
+    }
   };
 
     return (
@@ -145,6 +171,13 @@ const AddressCard = ({ title, address,id }) => {
           <TouchableOpacity style={styles.iconButton} onPress={handleEdit}>
             <MaterialIcons name="edit" size={12} color={COLORS.primary} style={{ alignItems: 'center', justifyContent: 'center' }} />
           </TouchableOpacity>
+        
+          <TouchableOpacity 
+            style={[styles.iconButton, { marginLeft: 10 }]} 
+            onPress={handleDeletePress} >
+            <MaterialIcons name="delete" size={15} color={COLORS.primary} />
+          </TouchableOpacity>
+          
           <TouchableOpacity style={[styles.iconButton, { marginLeft: 10 }]} onPress={onShare}>
             <Fontisto name="share-a" size={12} color={COLORS.primary} />
           </TouchableOpacity>
@@ -156,8 +189,8 @@ const AddressCard = ({ title, address,id }) => {
   
  
   return (
-    <ScrollView >
-      <StatusBar backgroundColor={COLORS.primary} style="light" />
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <StatusBar backgroundColor={COLORS.user_front_theme_color} style="dark" />
       <View style={{ paddingTop: 20 }}>
         <Header title={"My Addresses"} icon={icons.back}/>
       </View>
@@ -166,60 +199,79 @@ const AddressCard = ({ title, address,id }) => {
 
       <View style={[styles.inputContainer]}>
       <View style={[styles.input, { flex: 1, flexDirection: 'row', backgroundColor: '#fff', alignItems: 'center' }]}>
-        {/* <TouchableOpacity onPress={handlenewPress} style={styles.modalText}>
-        <Feather name="plus" size={20} color={COLORS.darkgreen} style={{ marginRight: 10 }} />
-
-         <Text style={styles.inputText}>Add New Address</Text>
-         <Ionicons name="chevron-forward-outline" size={24} color="black" style={{ marginLeft: 'auto',textAlign:'right'}} />
-
-        </TouchableOpacity> */}
+    
         <TouchableOpacity onPress={handlenewPress} style={styles.modalButton}>
-  <View style={styles.leftContainer}>
-    <Feather name="plus" size={20} color={COLORS.darkgreen} style={styles.leftIcon} />
-    <Text style={styles.inputText}>Add New Address</Text>
-  </View>
-</TouchableOpacity>
-<Ionicons name="chevron-forward-outline" size={24} color="black" style={styles.rightIcon}  onPress={handlenewPress}/>
+         <View style={styles.leftContainer}>
+         <Feather name="plus" size={20} color={COLORS.black} style={styles.leftIcon} />
+       <Text style={styles.inputText}>Add New Address</Text>
+        </View>
+       </TouchableOpacity>
+       <Ionicons name="chevron-forward-outline" size={24} color="black" style={styles.rightIcon}  onPress={handlenewPress}/>
 
             </View>
          
       </View>
       
         {/* Displaying Address Cards */}
+        {loading ? (
+      <View style={styles.shimmerContainer}>
+        {renderShimmer()}  
+        {renderShimmer()}
+        {renderShimmer()}
+      </View>
+    ) : (
+      <>
         {addresses.length > 0 ? (
           addresses.map((item) => (
             <AddressCard
               key={item.id}
-              id={item.id} // Pass the id here
+              id={item.id}
               title={item.name}
               address={`${item.address}, ${item.city}, ${item.country} - ${item.zipCode}`}
-            //   onSelect={handleSelectAddress}  // Pass address selection function
             />
           ))
         ) : (
-          <Text>No addresses found</Text>
+          <Text style={styles.noAddressesText}>No addresses found</Text>
         )}
-
-      {/* <CustomAlertModal
-        visible={showAlert}
-        greeting="Hello ,"
-        boldText={boldText}
-        message={alertMessage}
-        onCancel={() => setShowAlert(false)}
-        onOk={onAlertOk}
-      /> */}
+      </>
+    )}
+    
     </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+    scrollContainer: {
+    // flexGrow: 1,
+    // justifyContent: "center",
+    // alignItems: "center",
+  },
   modalButton: {
     flexDirection: 'row', // Row layout
     alignItems: 'center', // Vertically center the content
     justifyContent: 'space-between', // Space between the left and right sections
   
 
+  },
+  shimmerContainer: {
+    marginTop: 10,
+    width: wp("90%"),
+    alignItems: "center",
+  },
+  shimmerCard: {
+    marginBottom: 10,
+    borderRadius: 5,
+  },
+  noAddressesText: {
+    fontSize: 15,
+    color: "#555",
+    // justifyContent:'center',
+    // textAlign: "center",
+    flex:1,
+    // alignItems:'center',
+    marginTop: 20,
+    fontFamily:'Poppins'
   },
   leftContainer: {
     flexDirection: 'row', // Align the Feather icon and text in the same row

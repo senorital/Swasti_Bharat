@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet,TextInput, TouchableOpacity, Platform, UIManager, ScrollView, FlatList } from 'react-native';
+import React, { useState,useEffect } from 'react';
+import { View, Text, StyleSheet, BackHandler,TextInput, TouchableOpacity, Platform, UIManager, ScrollView, FlatList,ToastAndroid } from 'react-native';
 import { Menu, Provider, TextInput as PaperTextInput, IconButton, Checkbox, RadioButton } from 'react-native-paper';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
-import Header from '../../../../components/header/Header';
-import { StatusBar } from 'expo-status-bar';
 import { windowHeight, windowWidth } from '../../../../utils/Dimensions';
 import Slider from '@react-native-community/slider';
-
+import { COLORS } from '../../../../components/constants';
+import { Ionicons } from '@expo/vector-icons';
+import { SelectList } from 'react-native-dropdown-select-list';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -22,40 +22,111 @@ const CategoryBox = ({ text, children }) => {
   );
 };
 
-const HomeTutorSearch = ({ route }) => {
+const CustomHeader = ({ title, onClose }) => {
+  return (
+    <View style={styles.headerContainer}>
+      <Text style={styles.title}>{title}</Text>
+      <TouchableOpacity onPress={onClose} style={styles.closeButtons}>
+        <Ionicons name="close" size={24} color="black" />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const HomeTutorSearch = ({ route,navigation }) => {
   const [yogaTherapistChecked, setYogaTherapistChecked] = useState(false);
   const [ageRange, setAgeRange] = useState(0);
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [certification, setCertification] = useState('no');
-  const [selectedLanguages, setSelectedLanguages] = useState([]);
-  const [languageMenuVisible, setLanguageMenuVisible] = useState(false);
+  const [selectedLanguages, setSelectedLanguages] = useState(null);
   const [languageFilter, setLanguageFilter] = useState('');
+  const [isSessionPersonal, setIsSessionPersonal] = useState(false);
+  const [isSessionGroup, setIsSessionGroup] = useState(false);
+  const [isPackageYearly, setIsPackageYearly] = useState(false);
+  const [isPackageMonthly, setIsPackageMonthly] = useState(false);
 
-  const availableLanguages = ['English', 'Spanish', 'French', 'German'];
+  const availableLanguages = [
+    'English', 'Spanish', 'French', 'German', 'Hindi', 'Bengali', 'Telugu',
+    'Marathi', 'Tamil', 'Urdu', 'Gujarati', 'Malayalam', 'Kannada', 'Odia',
+    'Punjabi', 'Assamese', 'Maithili', 'Sanskrit', 'Konkani', 'Nepali', 
+    'Manipuri', 'Sindhi', 'Dogri', 'Kashmiri', 'Bodo'
+  ];
+
+  useEffect(() => {
+    const backAction = () => {
+       return true; 
+    };
+
+    // Add event listener for hardware back press
+    BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    // Cleanup the event listener when the component unmounts
+    return () => {
+      BackHandler.removeEventListener('hardwareBackPress', backAction);
+    };
+  }, []);
 
   const handleApply = () => {
-    console.log('Apply filters');
+  
+    // Prepare params object dynamically based on selected filters
+    const params = {};
+  
+    if (yogaTherapistChecked) {
+      params.yogaTherapistChecked = yogaTherapistChecked;
+    }
+  
+    if (priceRange) { // Assuming 5000 is the default maximum price
+      params.price = priceRange; // Use the maximum value in the range
+    }
+    if (certification !== 'no') { // Only include if certification is changed from default
+      params.certification = certification;
+    }
+    if (selectedLanguages) { // Only include if any language is selected
+      params.language = selectedLanguages;
+    }
+    if (isSessionPersonal) { // Only include if personal session is selected
+      params.isPersonal = isSessionPersonal;
+    }
+    if (isSessionGroup) { // Only include if group session is selected
+      params.isGroup = isSessionGroup;
+    }
+    if (isPackageYearly) { // Only include if yearly package is selected
+      params.weekly = isPackageYearly;
+    }
+    if (isPackageMonthly) { // Only include if monthly package is selected
+      params.monthly = isPackageMonthly;
+    }
+  
+    params.experience = ageRange; 
+  
+  
+    // Navigate with filtered params
+    navigation.navigate('Index', { filterParams: params });
   };
+  
 
   const handleReset = () => {
     setYogaTherapistChecked(false);
     setAgeRange(0);
     setPriceRange([0, 100]);
     setCertification('no');
-    setSelectedLanguages([]);
+    setSelectedLanguages('');
     setLanguageFilter('');
+    setIsSessionPersonal(false);
+    setIsSessionGroup(false);
+    setIsPackageYearly(false);
+    setIsPackageMonthly(false);
+    ToastAndroid.show('Filter Reset Successfully', ToastAndroid.SHORT);
+
   };
 
   const handleLanguageSelect = (language) => {
-    if (!selectedLanguages.includes(language)) {
-      setSelectedLanguages([...selectedLanguages, language]);
-    }
-    setLanguageMenuVisible(false);
-    setLanguageFilter('');
+    setSelectedLanguages(language); // Set the selected language
+    setLanguageFilter(''); // Clear the filter
   };
 
   const handleRemoveLanguage = (language) => {
-    setSelectedLanguages(selectedLanguages.filter(item => item !== language));
+    setSelectedLanguages(selectedLanguages.filter((item) => item !== language));
   };
 
   const handleCheckboxChange = (language) => {
@@ -66,15 +137,20 @@ const HomeTutorSearch = ({ route }) => {
     }
   };
 
+  const handleClose = () => {
+    navigation.navigate('Index');
+
+  };
+
   return (
     <Provider>
-      <ScrollView>
         <View style={styles.mainContainer}>
-          <StatusBar backgroundColor="#fff" />
-
-          <Header title={'Filter Options'} icon={'x'} />
+          <View style={{ paddingTop: 20 }}>
+          <CustomHeader title="Filter" onClose={handleClose} />
+          </View>
+          <ScrollView>
           <View style={styles.container}>
-            <CategoryBox text="Location">
+            {/* <CategoryBox text="Location">
               <View style={stylesdetail.inputContainer}>
                 <TextInput placeholder="Enter Location" style={styles.searchInput} editable={true} />
               </View>
@@ -85,10 +161,11 @@ const HomeTutorSearch = ({ route }) => {
                 isChecked={yogaTherapistChecked}
                 onChange={setYogaTherapistChecked}
               />
-            </CategoryBox>
+            </CategoryBox> */}
             <CategoryBox text="Experience">
               <View style={styles.sliderContainer}>
-                <Text>Age Range: {ageRange} years</Text>
+                <Text style={{fontFamily:'Poppins',fontSize:12}}>Age Range: {ageRange} years</Text>
+                <View style={{width:'100%'}}>
                 <Slider
                   style={styles.slider}
                   minimumValue={0}
@@ -96,10 +173,11 @@ const HomeTutorSearch = ({ route }) => {
                   step={1}
                   value={ageRange}
                   onValueChange={(value) => setAgeRange(value)}
-                  minimumTrackTintColor="#FC9C45"
-                  maximumTrackTintColor="#FC9C45"
-                  thumbTintColor="#FC9C45"
+                  minimumTrackTintColor={COLORS.primary}
+                  maximumTrackTintColor={COLORS.primary}
+                  thumbTintColor={COLORS.primary}
                 />
+                </View>
               </View>
             </CategoryBox>
             <CategoryBox text="Certification">
@@ -110,7 +188,7 @@ const HomeTutorSearch = ({ route }) => {
                       value="yes"
                       status={certification === 'yes' ? 'checked' : 'unchecked'}
                       onPress={() => setCertification('yes')}
-                      color="#FC9C45"
+                      color={COLORS.primary}
                     />
                     <Text style={styles.radioLabel}>Yes</Text>
                   </View>
@@ -119,7 +197,7 @@ const HomeTutorSearch = ({ route }) => {
                       value="no"
                       status={certification === 'no' ? 'checked' : 'unchecked'}
                       onPress={() => setCertification('no')}
-                      color="#FC9C45"
+                      color={COLORS.primary}
                     />
                     <Text style={styles.radioLabel}>No</Text>
                   </View>
@@ -128,146 +206,90 @@ const HomeTutorSearch = ({ route }) => {
             </CategoryBox>
             <CategoryBox text="Price">
               <View style={styles.sliderContainer}>
-                <Text>Price Range: ${priceRange[0]} - ${priceRange[1]}</Text>
-                <MultiSlider
-                  values={priceRange}
-                  sliderLength={280}
-                  onValuesChange={(values) => setPriceRange(values)}
-                  min={0}
-                  max={100}
-                  step={1}
-                  selectedStyle={{
-                    backgroundColor: "#FC9C45",
-                  }}
-                  unselectedStyle={{
-                    backgroundColor: "#d3d3d3",
-                  }}
-                  markerStyle={{
-                    backgroundColor: "#FC9C45",
-                  }}
-                />
+                <Text style={{fontFamily:'Poppins',fontSize:12}}>Price Range : ₹{priceRange[0]}</Text>
+              <MultiSlider
+  values={priceRange}
+  sliderLength={280}
+  onValuesChange={(values) => {
+    const lastValue = values[values.length - 1]; // Get the last value (max value of the range)
+    setPriceRange([lastValue]); // Set only the max value in the price range
+  }}
+  min={100}
+  max={5000}
+  step={1}
+  selectedStyle={{
+    backgroundColor: COLORS.primary,
+    marginLeft: 12,
+  }}
+  unselectedStyle={{
+    backgroundColor: '#d3d3d3',
+  }}
+  markerStyle={{
+    backgroundColor: COLORS.primary,
+    marginLeft: 12,
+  }}
+/>
+
               </View>
             </CategoryBox>
             <CategoryBox text="Language">
-              {/* <View style={styles.container}> */}
-                <Menu
-                  visible={languageMenuVisible}
-                  onDismiss={() => setLanguageMenuVisible(false)}
-                  anchor={
-                    <TouchableOpacity onPress={() => setLanguageMenuVisible(true)}>
-                      <PaperTextInput
-                        label="Select Language"
-                        value={languageFilter}
-                        mode="outlined"
-                        theme={{
-                          roundness: 10,
-                          colors: {
-                            primary: '#FC9C45',
-                            placeholder: '#A9A9A9',
-                          },
-                        }}
-                        style={styles.searchInput}
-                        underlineColor="transparent"
-                        editable={false}
-                      />
-                    </TouchableOpacity>
-                  }
-                  contentStyle={styles.menuContent}
-                  style={styles.menuStyle} // Added style for the menu width
-                >
-                  <View style={styles.menuSearchContainer}>
-                    <TextInput
-                      placeholder="Search..."
-                      value={languageFilter}
-                      onChangeText={(text) => setLanguageFilter(text)}
-                      style={styles.menuSearchInput}
-                    />
-                  </View>
-                  <FlatList
-                    data={availableLanguages.filter((language) =>
-                      language.toLowerCase().includes(languageFilter.toLowerCase())
-                    )}
-                    keyExtractor={(item) => item}
-                    renderItem={({ item }) => (
-                      <Menu.Item
-                        onPress={() => handleCheckboxChange(item)}
-                        title={
-                          <View style={styles.menuItemContent}>
-                            <Checkbox
-                              status={selectedLanguages.includes(item) ? 'checked' : 'unchecked'}
-                              onPress={() => handleCheckboxChange(item)}
-                              color="#FC9C45"
-                            />
-                            <Text>{item}</Text>
-                          </View>
-                        }
-                        style={styles.menuItem}
-                      />
-                    )}
-                  />
-                </Menu>
-                <View style={styles.selectedLanguagesContainer}>
-                  {selectedLanguages.map((language) => (
-                    <View key={language} style={styles.languageTab}>
-                      <Text style={styles.languageTabText}>{language}</Text>
-                      <IconButton
-                        icon="close"
-                        color="#fff"
-                        size={16}
-                        onPress={() => handleRemoveLanguage(language)}
-                        style={styles.closeButton}
-                      />
-                    </View>
-                  ))}
-                </View>
-              {/* </View> */}
+           
+            <SelectList
+          setSelected={handleLanguageSelect}
+          data={availableLanguages}
+          save="value"
+          fontFamily='Poppins'
+          placeholder="Select Language"
+        />
             </CategoryBox>
             <CategoryBox text="Session Offered">
-              <View style={{ flexDirection: 'row' }}>
-                <CheckboxWithLabel
-                  label="Personal"
-                  isChecked={yogaTherapistChecked}
-                  onChange={setYogaTherapistChecked}
-                />
-                <CheckboxWithLabel
-                  label="Group"
-                  isChecked={yogaTherapistChecked}
-                  onChange={setYogaTherapistChecked}
-                />
-              </View>
+              <CheckboxWithLabel
+                label="Personal"
+                isChecked={isSessionPersonal}
+                onChange={setIsSessionPersonal}
+              />
+              <CheckboxWithLabel
+                label="Group"
+                isChecked={isSessionGroup}
+                onChange={setIsSessionGroup}
+              />
             </CategoryBox>
-            <CategoryBox text="Package Type">
-              <View style={{ flexDirection: 'row' }}>
-                <CheckboxWithLabel
-                  label="Yearly"
-                  isChecked={yogaTherapistChecked}
-                  onChange={setYogaTherapistChecked}
-                />
-                <CheckboxWithLabel
-                  label="Monthly"
-                  isChecked={yogaTherapistChecked}
-                  onChange={setYogaTherapistChecked}
-                />
-              </View>
-            </CategoryBox>
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.button} onPress={handleApply}>
-                <Text style={styles.buttonText}>Apply</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={handleReset}>
-                <Text style={styles.buttonText}>Reset</Text>
-              </TouchableOpacity>
+            {/* <CategoryBox text="Package Type">
+              <CheckboxWithLabel
+                label="Yearly"
+                isChecked={isPackageYearly}
+                onChange={setIsPackageYearly}
+              />
+              <CheckboxWithLabel
+                label="Monthly"
+                isChecked={isPackageMonthly}
+                onChange={setIsPackageMonthly}
+              />
+            </CategoryBox> */}
             </View>
-          </View>
+           
+            </ScrollView>
+            </View>
+            <View style={styles.fixedButtonContainer}>
+           <TouchableOpacity style={styles.button} onPress={handleApply}>
+           <Text style={styles.buttonText}>Apply</Text>
+          </TouchableOpacity>
+         <TouchableOpacity style={styles.button} onPress={handleReset}>
+          <Text style={styles.buttonText}>Reset</Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+         
+     
+     
     </Provider>
   );
 };
 
+// export default HomeTutorSearch;
+
 const CheckboxWithLabel = ({ label, isChecked, onChange }) => (
   <TouchableOpacity onPress={() => onChange(!isChecked)} style={styles.checkboxContainer}>
-    <Checkbox status={isChecked ? 'checked' : 'unchecked'} onPress={() => onChange(!isChecked)} color="#FC9C45" />
+    <Checkbox status={isChecked ? 'checked' : 'unchecked'} onPress={() => onChange(!isChecked)} color={COLORS.primary} />
     <Text style={styles.checkboxLabel}>{label}</Text>
   </TouchableOpacity>
 );
@@ -275,53 +297,73 @@ const CheckboxWithLabel = ({ label, isChecked, onChange }) => (
 
 const stylesdetail = StyleSheet.create({
   inputContainer: {
-    width: '90%',
+    width: '100%',
     backgroundColor: '#fff',
-    height: windowHeight / 15,
+    // height: windowHeight / 15,
     borderColor: '#E3E5E5',
     borderWidth: 1,
-    margin: 12,
-    borderRadius: 10,
+    marginVertical:10,
+    borderRadius: 8,
     justifyContent: 'center',
   },
 });
 
 const styles = StyleSheet.create({
+    fixedButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
   mainContainer: {
     flex: 1,
     backgroundColor: '#fff',
   },
   container: {
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingBottom: 50,
   },
   boxContainer: {
     marginVertical: 10,
-    padding: 10,
-    backgroundColor: '#f7f7f7',
+    // padding: 10,
+    borderColor:'#eee',
+    borderWidth:1,
+    paddingVertical:10,
+    paddingHorizontal:10,
+    backgroundColor: '#F9F9F9',
     borderRadius: 10,
   },
   header: {
-    paddingBottom: 10,
+    paddingBottom: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
   },
   medtext: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 16,
+    fontFamily:'Poppins-Medium',
+  //  color: '#333',
   },
   searchInput: {
-    height: 40,
-    fontSize: 16,
+    // height: 40,
+    fontSize: 14,
+    fontFamily:'Poppins',
+    margin:5,
+    marginLeft:12,
     backgroundColor: '#fff',
   },
   sliderContainer: {
     marginVertical: 10,
   },
   slider: {
-    width: '100%',
+    // width: '100%',
     height: 40,
+    
   },
   radioContainer: {
     marginVertical: 10,
@@ -332,7 +374,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   radioLabel: {
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily:'Poppins'
   },
   menuContent: {
     backgroundColor: '#fff',
@@ -362,6 +405,7 @@ const styles = StyleSheet.create({
   menuItem: {
     paddingVertical: 0,
     paddingHorizontal: 10,
+    fontFamily:'Poppins'
   },
   selectedLanguagesContainer: {
     flexDirection: 'row',
@@ -371,7 +415,7 @@ const styles = StyleSheet.create({
   languageTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FC9C45',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
@@ -379,11 +423,12 @@ const styles = StyleSheet.create({
   },
   languageTabText: {
     color: '#fff',
-    marginRight: 5,
+    fontFamily:'Poppins'
   },
   closeButton: {
     margin: 0,
     padding: 0,
+    color:'#fff'
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -391,7 +436,7 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   button: {
-    backgroundColor: '#FC9C45',
+    backgroundColor: COLORS.primary,
     padding: 10,
     borderRadius: 10,
     width: '48%',
@@ -399,20 +444,44 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontFamily:'Poppins-Medium'
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 5,
+
   },
   checkbox: {
-    marginRight: 10,
+    // marginRight: 10,
   },
   checkboxLabel: {
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily:'Poppins'
   },
+  closeButtons :{
+    padding:10
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      // elevation: 0.1,
+      paddingHorizontal: 15,
+      marginTop: 20,
+      marginHorizontal:10,
+  //  paddingBottom: 10,
+   justifyContent:'space-between'
+
+  },
+  title: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Medium', // Use your preferred font family
+    color: 'black',
+  },
+
 });
 
 export default HomeTutorSearch;

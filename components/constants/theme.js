@@ -3,6 +3,8 @@ const {width, height} = Dimensions.get("window");
 
 
 export const COLORS = {
+dark_green : '#228B22',    
+address_blue :'#F6FCFC',    
 user_front_theme_color : "#d6d5ff",   
 attention :'#FFEBE2',
 attention_text :'#9A491A',    

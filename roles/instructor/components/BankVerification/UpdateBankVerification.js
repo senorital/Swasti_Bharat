@@ -6,7 +6,8 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
-  BackHandler,ToastAndroid
+  BackHandler,
+  ToastAndroid,
 } from "react-native";
 import {
   widthPercentageToDP as wp,
@@ -19,7 +20,11 @@ import Input from "../../../../components/input/Input";
 import Button from "../../../../components/button/Button";
 import { useNavigation } from "@react-navigation/native";
 import { COLORS, icons } from "../../../../components/constants";
-import { getBankDetails, addBankDetails } from "../../../../redux/actions/auth/auth"; // Import addBankDetails API
+import {
+  getBankDetails,
+  addBankDetails,
+  updateBankDetails, 
+} from "../../../../redux/actions/auth/auth";
 
 const UpdateBankVerification = () => {
   const dispatch = useDispatch();
@@ -31,12 +36,12 @@ const UpdateBankVerification = () => {
     bankName: "",
     IFSCCode: "",
     accountNumber: "",
-    isVerify: true
-
+    isVerify: true,
   });
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(true); // Set initial loading to true
+  const [loading, setLoading] = useState(true);
   const [isBankDetailsExist, setIsBankDetailsExist] = useState(false);
+  const [bankId, setBankId] = useState(null); // Add state for bank ID
 
   const handleOnchange = (text, input) => {
     setInputs((prevState) => ({ ...prevState, [input]: text }));
@@ -47,45 +52,76 @@ const UpdateBankVerification = () => {
     setErrors((prevState) => ({ ...prevState, [input]: error }));
   };
 
-  const handleSave = async () => {
+  // Additional validation function
+  const validateInputs = () => {
     let valid = true;
 
+    // Validate bank name
     if (!inputs.bankName) {
       handleError("Bank Name is required", "bankName");
       valid = false;
+    } else if (inputs.bankName.length < 3) {
+      handleError("Bank Name should be at least 3 characters", "bankName");
+      valid = false;
     }
 
+    // Validate IFSC Code
     if (!inputs.IFSCCode) {
       handleError("IFSC Code is required", "IFSCCode");
       valid = false;
+    
     }
 
+    // Validate account number
     if (!inputs.accountNumber) {
       handleError("Account Number is required", "accountNumber");
       valid = false;
+    } else if (!/^\d{9,18}$/.test(inputs.accountNumber)) {
+      handleError("Account Number must be between 9 and 18 digits", "accountNumber");
+      valid = false;
     }
 
-    if (!valid) {
-      return;
-    }
+    return valid;
+  };
+
+  const handleSave = async () => {
+    const isValid = validateInputs();
+    if (!isValid) return;
 
     try {
       setLoading(true);
-      const res = await dispatch(addBankDetails(inputs));
-      if (res.success) {
-        ToastAndroid.show(res.message, ToastAndroid.SHORT);
 
-        setIsBankDetailsExist(true);
-        navigation.goBack();
-
+      // If bank details already exist, update them
+      if (isBankDetailsExist  && bankId) {
+        const updatedInputs = {
+          name: inputs.name,
+          bankName: inputs.bankName,
+          accountNumber: inputs.accountNumber,
+          isVerify: true,
+          IFSCCode : inputs.IFSCCode,
+          id : bankId
+        };
+        const res = await dispatch(updateBankDetails(bankId,updatedInputs));
+        if (res.success) {
+          ToastAndroid.show(res.message, ToastAndroid.SHORT);
+          navigation.goBack();
+        } else {
+          ToastAndroid.show(res.message || "Failed to update bank details.", ToastAndroid.SHORT);
+        }
       } else {
+        // If bank details don't exist, add them
+        const res = await dispatch(addBankDetails(inputs));
+        if (res.success) {
+          ToastAndroid.show(res.message, ToastAndroid.SHORT);
+          setIsBankDetailsExist(true);
+          navigation.goBack();
+        } else {
           ToastAndroid.show(res.message || "Failed to add bank details.", ToastAndroid.SHORT);
-
+        }
       }
     } catch (error) {
-      console.error("Error adding bank details:", error);
-      ToastAndroid.show("An error occurred while adding bank details.", ToastAndroid.SHORT);
-
+      console.error("Error adding/updating bank details:", error);
+      ToastAndroid.show("An error occurred while adding/updating bank details.", ToastAndroid.SHORT);
     } finally {
       setLoading(false);
     }
@@ -96,7 +132,7 @@ const UpdateBankVerification = () => {
       try {
         const res = await dispatch(getBankDetails());
         if (res.success && res.data.length > 0) {
-          const { bankName, IFSCCode, accountNumber, name } = res.data[0];
+          const { bankName, IFSCCode, accountNumber, name, id } = res.data[0];
           setInputs((prevState) => ({
             ...prevState,
             bankName: bankName || "",
@@ -105,6 +141,7 @@ const UpdateBankVerification = () => {
             name: name || prevState.name,
           }));
           setIsBankDetailsExist(true);
+          setBankId(id); // Set the bank ID
         } else {
           setIsBankDetailsExist(false);
         }
@@ -125,10 +162,10 @@ const UpdateBankVerification = () => {
 
     const handleBackPress = () => {
       if (navigation.isFocused()) {
-        navigation.goBack(); // Go back if the current screen is focused
-        return true; // Prevent default behavior (exiting the app)
+        navigation.goBack();
+        return true;
       }
-      return false; // If not focused, allow default behavior (exit the app)
+      return false;
     };
 
     BackHandler.addEventListener("hardwareBackPress", handleBackPress);
@@ -179,6 +216,8 @@ const UpdateBankVerification = () => {
                 error={errors.IFSCCode}
                 keyboardType="text"
                 isRequired={true}
+                maxlength={11}
+
               />
               <Input
                 value={inputs.accountNumber}
@@ -189,15 +228,11 @@ const UpdateBankVerification = () => {
                 error={errors.accountNumber}
                 keyboardType="numeric"
                 isRequired={true}
+                maxlength={18}
               />
             </View>
           </View>
-          {!isBankDetailsExist && (
-            <Button
-              title="Save"
-              onPress={handleSave}
-            />
-          )}
+          <Button title={isBankDetailsExist ? "Update" : "Save"} onPress={handleSave} />
         </ScrollView>
       )}
     </View>
@@ -214,7 +249,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   label: {
-    // marginVertical: 5,
     fontSize: 14,
     fontFamily: "Poppins",
   },
@@ -233,58 +267,6 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins",
     height: 45,
     borderColor: "gray",
-  },
-  languageList: {
-    flexDirection: "row", // Display items horizontally
-    flexWrap: "wrap", // Wrap items to next row when needed
-  },
-  languageItem: {
-    margin: 5, // Add some margin between items
-    padding: 8,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
-  },
-  cameraContainer: {
-    width: wp(40),
-    height: hp(20),
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "gray",
-    // marginTop: 10,
-    backgroundColor: "#fff",
-  },
-  cameraImage: {
-    width: 30,
-    height: 30,
-    alignSelf: "center",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 40,
-  },
-  cameraText: {
-    fontSize: hp(2),
-    fontFamily: "Poppins",
-    textAlign: "center",
-  },
-  indicator: {
-    position: "absolute",
-    alignSelf: "center",
-  },
-  pdfContainer: {
-    // flex: 1,
-    marginTop: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  pdfIcon: {
-    width: 40,
-    height: 40,
-  },
-  pdfText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: "Poppins",
-    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,

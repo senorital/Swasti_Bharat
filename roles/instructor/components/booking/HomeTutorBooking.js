@@ -1,9 +1,10 @@
 import React, { useCallback } from "react";
-import { Text, View, StyleSheet, StatusBar, Image, BackHandler } from "react-native";
+import { Text, View, StyleSheet, Image, BackHandler } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import Header from "../../../../components/header/Header";
 import { icons } from "../../../../components/constants";
-
+import { StatusBar } from 'expo-status-bar';
+import { COLORS } from "../../../../components/constants";
 const HomeTutorBooking = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
@@ -25,6 +26,8 @@ const HomeTutorBooking = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+    <StatusBar backgroundColor={COLORS.primary} style="light"  />
+
     <View style={{ paddingTop: 20 }}>
         <Header title={"My Bookings"} icon={icons.back} />
       </View>    

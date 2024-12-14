@@ -23,7 +23,7 @@ import Toast from "react-native-toast-message";
 import { updateTutorTerm, getInstructor } from "../../../../redux/actions/auth/auth";
 import { COLORS } from "../../../../components/constants";
 import CustomAlertModal from "../../../../components/CustomAlert/CustomAlertModal";
-import { useFocusEffect } from '@react-navigation/native';
+
 
 const FirstHTutorScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -64,11 +64,10 @@ const FirstHTutorScreen = ({ navigation }) => {
     try {
       // Fetch the instructor profile
       const profileRes = await dispatch(getInstructor());
-      const profileComplete = profileRes.data.profileComplete;
       const qualifications = profileRes.data.data.qualifications;
       const username = profileRes.data.data.name || "User"; // Assuming username is available in the response
-  
-      if (profileComplete < 30) {
+      const bio = profileRes.data.data.bio; // Assuming username is available in the response
+      if (!bio) {
 
         setBoldText(username);
         setAlertMessage(`Please complete your Profile.`);
@@ -101,42 +100,53 @@ const FirstHTutorScreen = ({ navigation }) => {
   }, [dispatch, navigation]);
 
 
- 
-
   const handleSubmit = async (values) => {
     try {
-      const isProfileComplete = await checkProfileCompletion();
-     console.log(isProfileComplete)
-      if (!isProfileComplete) {
-        return; // Exit if profile or qualifications are incomplete
-      }
-        const isHome = values.selected === "Yes";
-      const termInfo = {
-        homeTutorTermAccepted: isHome,
-      };
-
-      setLoading(true);
-      const res = await dispatch(updateTutorTerm(termInfo));
-      console.log(res);
-
-      if (res.success) {
-        ToastAndroid.show(res.message, ToastAndroid.SHORT);
-
-
-        if (isHome) {
-          navigation.navigate("HomeTutor");
+      // Check if the user selects "Yes" for home tutor terms
+      const isHome = values.selected === "Yes";
+  
+      if (isHome) {
+        // If "Yes", check if the profile is complete
+        const isProfileComplete = await checkProfileCompletion();
+  
+        if (!isProfileComplete) {
+          // If profile is incomplete, show a message and exit
+          // ToastAndroid.show("Please complete your profile first.", ToastAndroid.SHORT);
+          return;
         }
+        
+        // Proceed with home tutor terms
+        const termInfo = { homeTutorTermAccepted: true };
+  
+        setLoading(true);
+        const res = await dispatch(updateTutorTerm(termInfo));
+  
+        if (res.success) {
+          // Show success message
+          ToastAndroid.show(res.message, ToastAndroid.SHORT);
+  
+          // Navigate to HomeTutor screen if home tutor terms are accepted
+          navigation.navigate("HomeTutor");
+        } else {
+          // Handle case where response is unsuccessful
+          ToastAndroid.show("Something went wrong. Please try again.", ToastAndroid.SHORT);
+        }
+      } else {
+        // If "No", just navigate to the Home screen without checking profile
+        navigation.navigate("Home");
       }
     } catch (error) {
       console.error("Error during form submission:", error);
-      const msg = error.res?.data?.message;
+      const msg = error.res?.data?.message || "An error occurred. Please try again.";
       ToastAndroid.show(msg, ToastAndroid.SHORT);
-
     } finally {
+      // Reset loading state
       setLoading(false);
     }
   };
 
+
+  
   const handleGoBack = () => {
     navigation.goBack();
   };
@@ -191,11 +201,11 @@ const FirstHTutorScreen = ({ navigation }) => {
                   }}
                 >
                   Welcome to{" "}
-                  <Text style={{ fontFamily: "PoppinsSemiBold", color: "#000" }}>
+                  <Text style={{ fontFamily: "Poppins-SemiBold", color: "#000" }}>
                     Swasti Bharat Partners !&nbsp;
                   </Text>
                   As a{" "}
-                  <Text style={{ fontFamily: "PoppinsSemiBold", color: "#000" }}>
+                  <Text style={{ fontFamily: "Poppins-SemiBold", color: "#000" }}>
                     Home Yoga Tutor
                   </Text>{" "}
                   on our platform, you have the opportunity to offer
@@ -297,12 +307,12 @@ const styles = StyleSheet.create({
   },
   headingText: {
     fontSize: 13,
-    fontFamily: "PoppinsSemiBold",
+    fontFamily: "Poppins-SemiBold",
     lineHeight: 28,
   },
   headingText1: {
     fontSize: 13,
-    fontFamily: "PoppinsSemiBold",
+    fontFamily: "Poppins-SemiBold",
     lineHeight: 28,
     marginBottom: 8,
   },

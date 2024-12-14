@@ -3,21 +3,14 @@ import {
   Text,
   View,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   StatusBar,
   Image,
   BackHandler,
 } from "react-native";
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
+
 import Header from "../../components/header/Header";
-// import BookingTab from "./BookingTab";
-// import HomeTutorBooking from "./HomeTutorBooking";
-// import TherapistBooking from "./TherapistBooking";
+
 import { COLORS, icons } from "../../components/constants";
 import Steps from "./steps";
 import ShareTab from "./ShareTab";

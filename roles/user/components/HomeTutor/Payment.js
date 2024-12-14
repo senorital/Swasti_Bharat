@@ -74,17 +74,7 @@ const Payment = ({ navigation, route }) => {
         <View style={{ borderBottomWidth: 30, borderBottomColor: '#F3F4F6', marginVertical: 0 }} />
 
         <View style={{ }}>
-          {/* <View style={{ flex: 1 }}>
-            <Text style={[styles.ratingstext, { textAlign: 'left', marginLeft: 0, marginVertical: 0 }]}>Total</Text>
-            <Text style={[styles.settingstext, { marginTop: 0, marginBottom: 4 }]}>{price || 200}</Text>
-          </View> */}
-          {/* <Pressable onPress={() => navigation.navigate('Confirmation')}>
-            <LinearGradient
-              colors={['#FC9D45', '#FC9C45']}
-              style={[styles.appButton, { width: windowWidth / 2, height: 50 }]}>
-              <Text style={styles.appButtonText}>Pay</Text>
-            </LinearGradient>
-          </Pressable> */}
+         
            <View style={customStyles.fixedButtonsContainer}>
       <Button title={"Pay"} onPress={onPay}  />
 

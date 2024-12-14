@@ -28,7 +28,6 @@ import { useDispatch } from "react-redux";
 import { COLORS, icons } from "../../../../components/constants";
 
 
-  
 
 const distances = [
     { id: 1, label: "1 km", value: 1000 },
@@ -65,11 +64,27 @@ const distances = [
       setRadius(value);
     };
 
+      
+useEffect(() => {
+  const handleBackPress = () => {
+    if (navigation.isFocused()) {
+      navigation.goBack();
+      return true;
+    }
+    return false;
+  };
+
+  BackHandler.addEventListener("hardwareBackPress", handleBackPress);
+
+  return () => {
+    BackHandler.removeEventListener("hardwareBackPress", handleBackPress);
+  };
+}, [navigation]);
+
     useEffect(() => {
         if (locationName) {
 
           setName(locationName);
-          console.log("LocationNAme :" + name)
 
         }
       }, [locationName]);
@@ -227,32 +242,16 @@ const distances = [
               unit: "km",
             };
 
-            console.log("LocationData locationName: " + locationData.locationName)
-            console.log("LocationData radius: " + locationData.radius)
-            console.log("LocationData latitude: " + locationData.latitude)
-            console.log("LocationData longitude: " + locationData.longitude)
-
+      
             dispatch(updateHTServiceArea(locationData,id))
               .then((res) => {
-                console.log(res)
-                // Toast.show({
-                //   type: "success",
-                //   text1: res.message,
-                //   visibilityTime: 2000,
-                //   autoHide: true,
-                // });
+               
                 ToastAndroid.show(res.message,ToastAndroid.SHORT)
   
                 setSubmitting(false);
-                // navigation.goBack();
               })
               .catch((error) => {
-                // Toast.show({
-                //   type: "error",
-                //   text1: "An error occurred. Please try again.",
-                //   visibilityTime: 2000,
-                //   autoHide: true,
-                // });
+              
                 ToastAndroid.show("An error occurred. Please try again.",ToastAndroid.SHORT)
 
                 setSubmitting(false);

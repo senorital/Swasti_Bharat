@@ -29,11 +29,11 @@ const Steps = ({ navigation }) => {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [userId, setUserId] = useState(user.data.id);
-
-  const packageName = Constants.manifest?.android?.package || "com.swastibharat.partners";
-  const inviteLink = `https://play.google.com/store/apps/details?id=${packageName}&userId=${userId}`;
+  const [usercode, setUsercode] = useState(user.data.userCode);
+  const packageName = Constants.manifest?.android?.package || "com.bharatswasti";
+  const inviteLink = `https://play.google.com/store/apps/details?id=${packageName}&referrer=c=${usercode}`;
   
-
+ 
 
   const copyToClipboard = () => {
     Clipboard.setString(inviteLink);
@@ -46,11 +46,12 @@ const Steps = ({ navigation }) => {
   const shareViaSocialMedia = async (platform) => {
     try {
       await Share.share({
-        message: `Hi, I just invited you to use the Swasti Bharat - Partners app!\n\nStep 1: Share your referral link/code with your friends\n\nStep 2: Your friend registers on Swasti Bharat using your referral code/link\n\nStep 3: You and your friends earn cash when your friend makes their first investment on Swasti Bharat\n\nDownload the app Now. ${inviteLink}`,
+        message: 
+        `Join Swasti Bharat and Unlock Rewards Together! 🎉 \n\n Hey there! I just found this amazing app, Swasti Bharat, and couldn’t wait to share it with you. Here’s how we can both earn rewards: \n\n ✨ Step 1: Use my referral link or code to download and sign up on Swasti Bharat.\n✨ Step 2: Complete your first session on the app.\n✨ Step 3: That’s it! We both earn Chakra rewards – yours are waiting for you too!\nDownload Now\n${inviteLink}`
 
       });
     } catch (error) {
-      console.log('Error sharing:', error.message);
+      console.log('Error sharing:', error?.message);
     }
   };
 

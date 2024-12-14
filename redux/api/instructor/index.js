@@ -1,16 +1,25 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
+import Toast from "react-native-toast-message";
+import { ToastAndroid } from "react-native";
 
 const api = axios.create({
-  // baseURL: "http://192.168.1.31:8080/",
+  baseURL: "http://192.168.1.7:3307/",
   // baseURL:"https://swasti.onrender.com/api/",
   // baseURL:"https://stoic-thompson.97-74-83-236.plesk.page/api/",
-   baseURL : "https://stoic-thompson.97-74-83-236.plesk.page"
+  //  baseURL : "https://stoic-thompson.97-74-83-236.plesk.page/"
 });
   
 api.interceptors.request.use(
   async (req) => {
     try {
+      const state = await NetInfo.fetch();
+      if (!state.isConnected) {
+        // Handle offline scenario
+        console.log("You are offline. Please check your internet connection.");
+        return Promise.reject(new Error("No internet connection"));
+      }
       const authToken = await AsyncStorage.getItem("authToken");
 
       if (authToken) {
@@ -25,6 +34,21 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (!error.response) {
+      // Handle cases like network failure
+      //  ToastAndroid.SHORT
+      // console.error("Network error or server is not reachable");
+    }
+    return Promise.reject(error);
+  }
+);
+
 
 
 //Authentication
@@ -42,7 +66,10 @@ export const verifyOtp = (otpInfo) =>
   api.post(`user/verifyNumberOTP`, otpInfo);
 export const getUserInstructor = (instructinfo) =>
   api.post(`user/instructor-user`, instructinfo);
-
+export const getVersion = () =>
+  api.get(`swasti/version`);
+export const addUpdateVersion = (latestVersion) =>
+  api.post(`swasti/version`, latestVersion);
 //Instructuor APIS
 export const getInstructor = () => api.get(`instructor/`);
 export const getUser = () => api.get(`student/`);
@@ -116,7 +143,6 @@ export const addCourse = (formData) => {
 };
 
 export const addQualification = (formData) => {
-  // console.log('Sending form data:', formData);
   return api.post(`instructor/qualification`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
@@ -127,8 +153,7 @@ export const addQualification = (formData) => {
 export const getQualification = (id) =>
   api.get(`instructor/qualification/${id}`);
 export const updateQualification = (id, formData) => {
-  // console.log("formData", formData)
-  // console.log(id)
+
   return api.put(`instructor/qualification/${id}`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
@@ -146,6 +171,16 @@ export const updateExperience = ({ id, ...experience }) => {
   return api.put(`instructor/experience/${id}`, experience);
 };
 
+export const updateKYC = ({ id, ...formData }) => {
+ 
+  return api.put(`instructor/KYC/${id}`, formData);
+};
+
+export const updateBankDetails = ({id, ...formData}) => {
+  console.log('Request URL:', `instructor/bankDetails/${id}`); // Log the request URL
+  return api.put(`instructor/bankDetails/${id}`, formData);
+};
+
 export const deleteExperience = (id) =>
   api.delete(`instructor/experience/${id}`);
 
@@ -155,11 +190,17 @@ export const addHomeTutor = (tutorInfo) =>
 
 export const addTutorLocation = ({ id, ...location }) =>
   api.post(`instructor/ht/addHTutorSeviceArea/${id}`, location);
+export const addTutorPrice = ({ id, ...price }) =>
+  api.post(`instructor/ht/addHTutorPrice/${id}`, price);
 export const getTutorQualification = (id) => api.get(`instructor/qualificationIn/${id}`);
 export const getTutor = () => api.get(`instructor/ht/homeTutors`);
 export const getTutorById = (id) => api.get(`instructor/ht/homeTutors/${id}`);
-export const addTimeSlot = ({ id, ...slot }) =>
-  api.post(`instructor/ht/addHTutorTimeSlote/${id}`, slot);
+export const addTimeSlot = ({ id, ...slot }) => {
+
+  
+  return api.post(`instructor/ht/addHTutorTimeSlote/${id}`, slot);
+};
+
 export const addTutorPhoto = (formData,id) => {
 
   return api.post(`instructor/ht/addHTutorImage/${id}`, formData, {
@@ -171,6 +212,7 @@ export const addTutorPhoto = (formData,id) => {
 
 
 export const updateHomeTutor = ({ id, ...tutorInfo }) => {
+
   return api.put(`instructor/ht/updateHomeTutor/${id}`, tutorInfo);
 };
 
@@ -186,6 +228,14 @@ export const submitHomeTutor = (id) => {
 
 export const getServiceArea = (id) => {
   return api.get(`instructor/ht/hTServiceArea/${id}`);
+};
+
+export const getPrice = (id) => {
+  return api.get(`instructor/ht/hTPrice/${id}`);
+};
+
+export const  getYogaForCategory = () => {
+  return api.get(`instructor/mas/y-f-category/`);
 };
 
 export const publishHomeTutor = ({ id, ...publish }) => {
@@ -245,10 +295,10 @@ export const publishYogaStudio = ({ id, ...publish }) => {
 
 //notifcation
 export const getServiceNotification = () =>
-  api.get(`instructor/serviceNotifications`);
+  api.get(`instructor/ht/userNotifications`);
 
 export const viewServiceNotification = () =>
-  api.put(`instructor/viewServiceNotifications`);
+  api.put(`instructor/ht/viewServiceNotifications`);
 
 //Get All Service Area 
 
@@ -260,12 +310,14 @@ export const addKYC = (formData) =>
 export const getKYC = () =>
   api.get(`instructor/kyc`);
 
+
 //Bank Verification
 export const addBankDetails = (formData) =>
   api.post(`instructor/bankDetails`,formData);
 
 export const getBankDetails = () =>
   api.get(`instructor/bankDetails`);
+
 
 export const getchakras = () =>
   api.get(`instructor/chakras`);

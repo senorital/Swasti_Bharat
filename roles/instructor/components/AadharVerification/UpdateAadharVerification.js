@@ -10,17 +10,14 @@ import {
   ToastAndroid
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
-import Toast from "react-native-toast-message";
 import Header from "../../../../components/header/Header";
 import Input from "../../../../components/input/Input";
 import Button from "../../../../components/button/Button";
 import { useNavigation } from "@react-navigation/native";
 import { COLORS, icons } from "../../../../components/constants";
-import { getKYC, addKYC } from "../../../../redux/actions/auth/auth"; // Import addKYC API
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
+import { getKYC, addKYC, updateKYC } from "../../../../redux/actions/auth/auth"; // Add updateKYC API
+import NetInfo from "@react-native-community/netinfo"; // Import NetInfo
+
 
 const UpdateAadharVerification = () => {
   const dispatch = useDispatch();
@@ -31,12 +28,13 @@ const UpdateAadharVerification = () => {
     name: user.data.name || "",
     aadharNumber: "",
     address: "",
-    isVerify: true
-
+    isVerify: true,
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [isKYCDetailsExist, setIsKYCDetailsExist] = useState(false);
+  const [kycId, setKycId] = useState(null); // Store KYC id
+  const [isConnected, setIsConnected] = useState(true); // State to track the network connection status
 
   const handleOnchange = (text, input) => {
     setInputs((prevState) => ({ ...prevState, [input]: text }));
@@ -47,16 +45,16 @@ const UpdateAadharVerification = () => {
     setErrors((prevState) => ({ ...prevState, [input]: error }));
   };
 
-  const handleSave = async () => {
+  const validateInputs = () => {
     let valid = true;
 
-    if (!inputs.name) {
-      handleError("Name is required", "name");
+    if (!inputs.name || inputs.name.trim().length <= 3) {
+      handleError("Name must be more than 3 characters", "name");
       valid = false;
     }
 
-    if (!inputs.aadharNumber) {
-      handleError("Aadhar Card Number is required", "aadharNumber");
+    if (!inputs.aadharNumber || !/^\d{12}$/.test(inputs.aadharNumber)) {
+      handleError("Aadhar Card Number must be exactly 12 digits", "aadharNumber");
       valid = false;
     }
 
@@ -65,58 +63,128 @@ const UpdateAadharVerification = () => {
       valid = false;
     }
 
-    if (!valid) {
+    return valid;
+  };
+
+  const handleSave = async () => {
+    const isValid = validateInputs();
+
+    if (!isValid) {
       return;
     }
 
     try {
       setLoading(true);
-      const res = await dispatch(addKYC(inputs));
-      if (res.success) {
-      ToastAndroid.show(res.message, ToastAndroid.SHORT);
 
-        setIsKYCDetailsExist(true);
-        navigation.goBack();
+      // Log the data to be sent for updating or adding KYC details
+    
+
+      if (isKYCDetailsExist && kycId) {
+        
+        const updatedInputs = {
+          name: inputs.name,
+          aadharNumber: inputs.aadharNumber,
+          address: inputs.address,
+          isVerify: true,
+          id : kycId
+        };
+     console.log("updatedInputs :" + updatedInputs)
+
+        const res = await dispatch(updateKYC(kycId,updatedInputs));
+        if (res.success) {
+          ToastAndroid.show(res.message, ToastAndroid.SHORT);
+          navigation.goBack();
+        } else {
+          ToastAndroid.show(res.message || "Failed to update KYC details.", ToastAndroid.SHORT);
+        }
       } else {
-     ToastAndroid.show(res.message || "Failed to add KYC details.", ToastAndroid.SHORT);
-
+          const res = await dispatch(addKYC(inputs));
+        if (res.success) {
+          ToastAndroid.show(res.message, ToastAndroid.SHORT);
+          setIsKYCDetailsExist(true);
+          navigation.goBack();
+        } else {
+          ToastAndroid.show(res.message || "Failed to add KYC details.", ToastAndroid.SHORT);
+        }
       }
     } catch (error) {
-      console.error("Error adding KYC details:", error);
-      ToastAndroid.show("An error occurred while adding bank details.", ToastAndroid.SHORT);
-
+      console.error("Error saving KYC details:", error);
+      ToastAndroid.show("An error occurred while saving KYC details.", ToastAndroid.SHORT);
     } finally {
       setLoading(false);
     }
   };
 
+  // useEffect(() => {
+  //   const fetchKycDetails = async () => {
+  //     try {
+  //       const res = await dispatch(getKYC());
+  //       if (res.success && res.data) {
+  //         const { name, aadharNumber, address, id } = res.data;
+  //         setInputs({
+  //           name: name || user.data.name,
+  //           aadharNumber: aadharNumber || "",
+  //           address: address || "",
+  //         });
+  //         setKycId(id); // Set the KYC id
+  //         setIsKYCDetailsExist(true);
+  //       } else {
+  //         setIsKYCDetailsExist(false);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching KYC details:", error);
+  //       ToastAndroid.show("An error occurred while fetching KYC details.", ToastAndroid.SHORT);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchKycDetails();
+
+  //   const handleBackPress = () => {
+  //     if (navigation.isFocused()) {
+  //       navigation.goBack();
+  //       return true;
+  //     }
+  //     return false;
+  //   };
+
+  //   BackHandler.addEventListener("hardwareBackPress", handleBackPress);
+
+  //   return () => {
+  //     BackHandler.removeEventListener("hardwareBackPress", handleBackPress);
+  //   };
+  // }, [dispatch, navigation, user.data.name]);
+
   useEffect(() => {
+    // Check network connection when the component mounts
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsConnected(state.isConnected); // Update state based on network connection status
+    });
+
     const fetchKycDetails = async () => {
+      if (!isConnected) {
+        ToastAndroid.show("No internet connection. Please try again later.", ToastAndroid.SHORT);
+        return;
+      }
+
       try {
         const res = await dispatch(getKYC());
         if (res.success && res.data) {
-          const { name, aadharNumber, address } = res.data;
+          const { name, aadharNumber, address, id } = res.data;
           setInputs({
             name: name || user.data.name,
             aadharNumber: aadharNumber || "",
             address: address || "",
           });
+          setKycId(id); // Set the KYC id
           setIsKYCDetailsExist(true);
         } else {
           setIsKYCDetailsExist(false);
-          console.log("KYC Details" + res.message);
-
-          // Toast.show({
-          //   type: "info",
-          //   text1: res.message || "No KYC details found.",
-          //   visibilityTime: 2000,
-          //   autoHide: true,
-          // });
         }
       } catch (error) {
         console.error("Error fetching KYC details:", error);
-        ToastAndroid.show("An error occurred while adding bank details.", ToastAndroid.SHORT);
-
+        ToastAndroid.show("An error occurred while fetching KYC details.", ToastAndroid.SHORT);
       } finally {
         setLoading(false);
       }
@@ -136,8 +204,9 @@ const UpdateAadharVerification = () => {
 
     return () => {
       BackHandler.removeEventListener("hardwareBackPress", handleBackPress);
+      unsubscribe(); // Clean up the NetInfo listener when the component unmounts
     };
-  }, [dispatch, navigation, user.data.name]);
+  }, [dispatch, navigation, user.data.name, isConnected]);
 
   return (
     <View style={styles.container}>
@@ -155,14 +224,13 @@ const UpdateAadharVerification = () => {
             <View style={{ marginTop: 10 }}>
               <Input
                 value={inputs.name}
-                editable={false}
+                onChangeText={(text) => handleOnchange(text, "name")}
                 onFocus={() => handleError(null, "name")}
                 label="Name"
                 placeholder="Enter Name"
                 error={errors.name}
                 isRequired={true}
               />
-              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
               <Input
                 value={inputs.aadharNumber}
                 onChangeText={(text) => handleOnchange(text, "aadharNumber")}
@@ -172,8 +240,8 @@ const UpdateAadharVerification = () => {
                 error={errors.aadharNumber}
                 keyboardType="numeric"
                 isRequired={true}
+                maxLength={12}  // Limit the input to 12 characters
               />
-              {/* {errors.aadharNumber && <Text style={styles.errorText}>{errors.aadharNumber}</Text>} */}
               <Input
                 value={inputs.address}
                 style={{ textAlignVertical: "top", paddingTop: 10 }}
@@ -186,22 +254,17 @@ const UpdateAadharVerification = () => {
                 error={errors.address}
                 isRequired={true}
               />
-              {/* {errors.address && <Text style={styles.errorText}>{errors.address}</Text>} */}
             </View>
           </View>
-          {!isKYCDetailsExist && (
-            <Button
-              title="Save"
-              onPress={handleSave}
-            />
-          )}
+          <Button
+            title={isKYCDetailsExist ? "Update" : "Save"}
+            onPress={handleSave}
+          />
         </ScrollView>
       )}
     </View>
   );
 };
-
-
 
 const styles = StyleSheet.create({
   container: {
@@ -213,7 +276,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   label: {
-    // marginVertical: 5,
     fontSize: 14,
     fontFamily: "Poppins",
   },
@@ -232,58 +294,6 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins",
     height: 45,
     borderColor: "gray",
-  },
-  languageList: {
-    flexDirection: "row", // Display items horizontally
-    flexWrap: "wrap", // Wrap items to next row when needed
-  },
-  languageItem: {
-    margin: 5, // Add some margin between items
-    padding: 8,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
-  },
-  cameraContainer: {
-    width: wp(40),
-    height: hp(20),
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "gray",
-    // marginTop: 10,
-    backgroundColor: "#fff",
-  },
-  cameraImage: {
-    width: 30,
-    height: 30,
-    alignSelf: "center",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 40,
-  },
-  cameraText: {
-    fontSize: hp(2),
-    fontFamily: "Poppins",
-    textAlign: "center",
-  },
-  indicator: {
-    position: "absolute",
-    alignSelf: "center",
-  },
-  pdfContainer: {
-    // flex: 1,
-    marginTop: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  pdfIcon: {
-    width: 40,
-    height: 40,
-  },
-  pdfText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: "Poppins",
-    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,

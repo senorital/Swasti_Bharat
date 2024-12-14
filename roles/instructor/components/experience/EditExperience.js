@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import {
   Text,
@@ -9,16 +10,16 @@ import {
   ActivityIndicator,
   BackHandler,
   ToastAndroid,
+  Modal,
 } from "react-native";
-import Toast from "react-native-toast-message";
+import { Calendar } from "react-native-calendars";
 import { useDispatch } from "react-redux";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Header from "../../../../components/header/Header";
 import Input from "../../../../components/input/Input";
 import Button from "../../../../components/button/Button";
-import AddCustomData from "../addCustomdata/AddCustomData";
 import { getExperience, updateExperience } from "../../../../redux/actions/instructor/experience/experience";
 import { COLORS, icons } from "../../../../components/constants";
+import MultiSelect from "react-native-multiple-select";
 
 const EditExperience = ({ navigation, route }) => {
   const { id } = route.params;
@@ -30,8 +31,9 @@ const EditExperience = ({ navigation, route }) => {
     organization: "",
   });
   const [errors, setErrors] = useState({});
-  const [skills, setSkills] = useState([]);
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [skills, setSkills] = useState([]); // Selected skills
+  const [availableSkills, setAvailableSkills] = useState([]); // Options for skills dropdown
+  const [isCalendarVisible, setCalendarVisibility] = useState(false);
   const [date, setDate] = useState("Select Date");
   const [loading, setLoading] = useState(false);
   const [loading1, setLoading1] = useState(false);
@@ -50,9 +52,19 @@ const EditExperience = ({ navigation, route }) => {
             skills,
             joinDate,
           } = res.data;
+
           setInputs({ workHistory, role, department, organization });
           setSkills(Array.isArray(skills) ? skills : []);
           setDate(joinDate);
+
+          // Fetch skill options from API or define statically
+          setAvailableSkills([
+            { id: "1", name: "JavaScript" },
+            { id: "2", name: "React Native" },
+            { id: "3", name: "Node.js" },
+            { id: "4", name: "Python" },
+            { id: "5", name: "Java" },
+          ]);
         }
       } finally {
         setLoading1(false);
@@ -61,7 +73,6 @@ const EditExperience = ({ navigation, route }) => {
 
     fetchData();
   }, [dispatch, id]);
-
   const handleOnchange = (text, input) => {
     setInputs((prevState) => ({ ...prevState, [input]: text }));
     setErrors((prevState) => ({ ...prevState, [input]: "" }));
@@ -71,48 +82,26 @@ const EditExperience = ({ navigation, route }) => {
     setErrors((prevState) => ({ ...prevState, [input]: error }));
   };
 
-  const showDatePicker = () => {
-    setDatePickerVisibility(true);
-  };
-
-  const hideDatePicker = () => {
-    setDatePickerVisibility(false);
-  };
-
-  const handleDateConfirm = (date) => {
-    if (!date) {
-      handleError("Please select a valid date", "date");
-      return;
-    }
-
-    const dt = new Date(date);
-    const x = dt.toISOString().split("T");
-    const x1 = x[0].split("-");
-    setDate(`${x1[1]}/${x1[2]}/${x1[0]}`);
-    handleError(null, "date");
-    hideDatePicker();
-  };
-
   const validate = async () => {
     let isValid = true;
-  
+
     try {
       const fields = ["workHistory", "role", "organization", "department"];
-  
+
       fields.forEach((field) => {
         if (!inputs[field]) {
           handleError(`Please input ${field.replace(/_/g, " ")}`, field);
           isValid = false;
         }
       });
-  
+
       if (date === "Select Date") {
         handleError("Please select a join date", "date");
         isValid = false;
       }
-  
+
       if (!isValid) return false;
-  
+
       const data = {
         skills,
         joinDate: date,
@@ -122,42 +111,27 @@ const EditExperience = ({ navigation, route }) => {
         organization: inputs.organization,
         id,
       };
-  
+
       setLoading(true);
-  
+
       const res = await dispatch(updateExperience(data));
-  
+
       if (res.success) {
         setErrors({});
-        // Toast.show({
-        //   type: "success",
-        //   text1: res.message,
-        //   visibilityTime: 2000,
-        //   autoHide: true,
-        // });
         ToastAndroid.show(res.message, ToastAndroid.SHORT);
-
         navigation.goBack();
       } else {
         throw new Error(res.message || "Failed to update experience");
       }
     } catch (error) {
       console.error("Error during form submission:", error);
-      // Toast.show({
-      //   type: "error",
-      //   text1: "An error occurred. Please try again.",
-      //   visibilityTime: 2000,
-      //   autoHide: true,
-      // });
-      ToastAndroid.show('An error occurred. Please try again.', ToastAndroid.SHORT);
-
+      ToastAndroid.show("An error occurred. Please try again.", ToastAndroid.SHORT);
     } finally {
       setLoading(false);
     }
-  
+
     return isValid;
   };
-  
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -175,6 +149,17 @@ const EditExperience = ({ navigation, route }) => {
     };
   }, [navigation]);
 
+  const openCalendar = () => setCalendarVisibility(true);
+  const closeCalendar = () => setCalendarVisibility(false);
+
+  const handleDateSelect = (day) => {
+    setDate(day.dateString);
+    setErrors((prevState) => ({ ...prevState, date: "" }));
+    closeCalendar();
+  };
+  const handleSkillsChange = (selectedItems) => {
+    setSkills(selectedItems);
+  };
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor={COLORS.primary} style="light" />
@@ -215,58 +200,90 @@ const EditExperience = ({ navigation, route }) => {
               value={inputs.organization}
               isRequired={true}
             />
+           
             <Text style={styles.label}>
               Join Date<Text style={{ color: "red" }}> *</Text>
             </Text>
             <TouchableOpacity
               style={styles.inputContainer}
-              onPress={showDatePicker}
+              onPress={openCalendar}
             >
               <Text style={styles.dateText}>
                 {date}
               </Text>
             </TouchableOpacity>
-            <DateTimePickerModal
-              isVisible={isDatePickerVisible}
-              mode="date"
-              onConfirm={handleDateConfirm}
-              onCancel={hideDatePicker}
-            />
             {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
-            <View style={{ marginTop: 10 }}>
-              <Input
-                onChangeText={(text) => handleOnchange(text, "department")}
-                onFocus={() => handleError(null, "department")}
-                label="Department"
-                placeholder="Department"
-                error={errors.department}
-                value={inputs.department}
-                isRequired={true}
-              />
-            </View>
-            {/* <AddCustomData
-              languages={skills}
-              setLanguages={setSkills}
-              label={"Skills"}
-              isRequired={true}
-            />
-            <View style={styles.languageList}>
-              {skills.map((skill, index) => (
-                <View key={index} style={styles.languageItem}>
-                  <Text>{skill}</Text>
-                </View>
-              ))}
-              {errors.skills && <Text style={styles.errorText}>{errors.skills}</Text>}
-            </View> */}
+            <Modal
+              visible={isCalendarVisible}
+              transparent
+              animationType="slide"
+            >
+              <View style={styles.modalContainer}>
+                <Calendar
+                  onDayPress={handleDateSelect}
+                  markedDates={{
+                    [date]: { selected: true, selectedColor: COLORS.primary },
+                    [new Date().toISOString().split("T")[0]]: {
+                      marked: true,
+                      dotColor: COLORS.primary,
+                      activeOpacity: 0,
+                    },
+                    
+                  }}
+                  maxDate={new Date().toISOString().split("T")[0]} // Disable future dates
+
+                  theme={{
+                    arrowColor: COLORS.primary,
+                    todayTextColor: COLORS.primary,
+                    textDayFontFamily: "Poppins",
+                    textMonthFontFamily: "Poppins",
+                    textDayHeaderFontFamily: "Poppins",
+                    selectedDayBackgroundColor: COLORS.primary,
+                    selectedDayTextColor: "#fff",
+                  }}
+                />
+              </View>
+            </Modal>
+          
+            <Text style={styles.label}>
+  Skills<Text style={{ color: "red" }}> *</Text>
+</Text>
+<MultiSelect
+  items={availableSkills}
+  uniqueKey="id"
+  onSelectedItemsChange={handleSkillsChange}
+  selectedItems={skills}
+  selectText="Select Skills"
+  searchInputPlaceholderText="Search Skills..."
+  tagRemoveIconColor="#ff0000"
+  tagBorderColor={COLORS.primary}
+  tagTextColor={COLORS.primary}
+  selectedItemTextColor={COLORS.primary}
+  selectedItemIconColor={COLORS.primary}
+  itemTextColor="#000"
+  displayKey="name"
+  hideSubmitButton={true}
+  searchInputStyle={{
+    color: "#000",
+    fontFamily: "Poppins", // Set custom font family for search input
+  
+  }}
+  submitButtonColor={COLORS.primary}
+  submitButtonText="Submit"
+  styleListContainer={{
+    height: 150,
+    borderColor: COLORS.icon_background, // Border color for the dropdown list
+    borderWidth: 1, // Border width for the dropdown list
+    borderRadius: 5, // Optional: Add rounded corners to the dropdown list
+  }}
+  styleDropdownMenuSubsection={styles.dropdownMenuSubsection}
+
+/>
+{errors.skills && <Text style={styles.errorText}>{errors.skills}</Text>}
+
           </View>
           <Button
-            title={
-              loading ? (
-                <ActivityIndicator size="small" color="#ffffff" style={styles.indicator} />
-              ) : (
-                "Update"
-              )
-            }
+            title={loading ? <ActivityIndicator size="small" color="#ffffff" /> : "Update"}
             onPress={validate}
           />
         </ScrollView>
@@ -280,13 +297,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+  dropdownMenuSubsection: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.icon_background,
+    paddingLeft:10,
+    height:45,
+    // fontFamily:'Poppins'
+  },    
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    // margin: 20,
+  },
   text: {
     fontFamily: "Poppins",
     fontSize: 16,
   },
   label: {
     fontSize: 14,
-    fontFamily: "Poppins",
+    fontFamily: "Poppins-Medium",
+    color: COLORS.primary,
   },
   errorText: {
     marginTop: 7,
@@ -300,24 +334,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 15,
     borderWidth: 1,
-    height: 45,
-    borderColor: "gray",
+    height: 50,
+    borderColor: COLORS.icon_background,
+    marginBottom:15
   },
   dateText: {
     fontSize: 14,
     color: "gray",
-    padding: 10,
+    textAlign:'center',
+    alignItems:'center',
     fontFamily: "Poppins",
-  },
-  languageList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  languageItem: {
-    margin: 5,
-    padding: 8,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
+    marginTop:10
   },
   indicator: {
     position: "absolute",

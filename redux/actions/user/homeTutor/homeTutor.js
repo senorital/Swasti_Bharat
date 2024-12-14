@@ -4,7 +4,8 @@ import {
     GET_TUTOR,
     GET_TUTOR_BY_ID,
     GET_TUTOR_TIME_SLOT,
-    GET_USER
+    GET_USER,
+    VERIFY_PAYMENT
   } from "../../../constants/user/types";
 
   export const getUser = () => async(dispatch) =>{
@@ -19,21 +20,40 @@ import {
     }
     };
   
-  export const getHomeTutor = () => async(dispatch) =>{
-  try {
-  const {data} = await api.getHomeTutor();
-  dispatch({type : GET_TUTOR , payload : data});
-  return data;
-  }catch(error){
-    console.log(error);
-    throw error;
-  }
-  };
+    export const getHomeTutor = (filters = {}) => async (dispatch) => {
+      try {
+      
+    
+        // Make the API call
+        const { data } = await api.getHomeTutor(filters);
+    
+        // Dispatch the fetched data
+        dispatch({ type: GET_TUTOR, payload: data });
+    
+        console.log('Tutor data:', data);
+        return data;
+      } catch (error) {
+        console.error('Error fetching tutors:', error);
+        throw error;
+      }
+    };
+    
+    export const getHometutors = () => async(dispatch) =>{
+      try {
+      const {data} = await api.getHomeTutors();
+      dispatch({type : GET_TUTOR , payload : data});
+      console("User Data :" + data)
+      return data;
+      }catch(error){
+        console.log(error);
+        throw error;
+      }
+      };
 
-  export const getHomeTutorById = (homeTutorId) => async (dispatch) => {
+  export const getHomeTutorById = (params) => async (dispatch) => {
     try {
-      console.log("homeTutorId : " + homeTutorId);
-      const { data } = await api.getHomeTutorById(homeTutorId);
+      // console.log("homeTutorId : " + homeTutorId);
+      const { data } = await api.getHomeTutorById(params);
       dispatch({ type: GET_TUTOR_BY_ID, payload: data });
       console.log(data)
       return data;
@@ -64,6 +84,20 @@ import {
       const { data } = await api.createBookingOrder(orderInfo);
       dispatch({ type: CREATE_ORDER , payload: data });
       console.log(data)
+      return data;
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  };
+
+  export const verifyHtPayment = (orderId) => async (dispatch) => {
+    try {
+   
+      const { data } = await api.verifyHtPayment(orderId);
+      console.log("VERIFY_PAYMENT :" + data)
+
+      dispatch({ type: VERIFY_PAYMENT , payload: data });
       return data;
     } catch (error) {
       console.log(error);

@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from "react";
+import React, { useState,useEffect,useRef } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,8 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
   TextInput,
-  BackHandler,
-  ToastAndroid
+  BackHandler,Platform,
+  ToastAndroid,Modal,FlatList
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { Calendar } from "react-native-calendars";
@@ -18,13 +18,17 @@ import { SelectList } from "react-native-dropdown-select-list";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Header from "../../../../components/header/Header";
 import Button from "../../../../components/button/Button";
-import { addTimeSlot, getServiceArea } from "../../../../redux/actions/instructor/homeTutor/homeTutor";
+import { addTimeSlot, addTutorLocation, addTutorPrice, getServiceArea } from "../../../../redux/actions/instructor/homeTutor/homeTutor";
 import { useDispatch } from "react-redux";
 import { COLORS, icons } from "../../../../components/constants";
 import DatePicker from 'react-native-date-picker';
 import { SCREEN_WIDTH } from "@gorhom/bottom-sheet";
 import { startGeofencingAsync } from "expo-location";
-
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { GOOGLE_MAPS_APIKEY } from "../../../../profile/apiKey";
+import MapView, { Marker, Circle } from "react-native-maps";
+import { getPrice } from "../../../../redux/actions/instructor/homeTutor/homeTutor";
+import CustomTimePickerWithClock from "../../../../components/customPicker/CustomTimePicker";
 const durationOptions = [
   { key: "15", value: "15" },
   { key: "20", value: "20" },
@@ -47,21 +51,41 @@ const serviceTypeItems=[
   {key:'Group',value:'Group'}
 ]
 
-const serviceAreaLocation=[
-  {key:'Badarpur Border',value:'Badarpur Border'},
+const classmodeType=[
+  {key:'Online',value:'Online'},
+  {key:'Offline',value:'Offline'}
 ]
+const distances = [
+  { id: 1, label: "1 km", value: 1000 },
+  { id: 2, label: "3 km", value: 3000 },
+  { id: 3, label: "5 km", value: 5000 },
+  { id: 4, label: "10 km", value: 10000 },
+];
+
+const CustomHeader = () => (
+  <View style={{ backgroundColor: "red", padding: 20 }}>
+    <Text style={{ color: "#3498db", fontSize: 18 }}>Pick a Date</Text>
+  </View>
+);
+const defaultLocation = {
+  latitude: 28.6139, // Latitude for New Delhi
+  longitude: 77.2090, // Longitude for New Delhi
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
+};
+const themeColor = "#3498db"; // Replace with your desired theme color
 
 const AddTimeSlot = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const today1 = new Date();
-
+ 
   const todayDateString = today1.toISOString().split("T")[0];
 
   const { id } = route.params;
-  console.log("ID :" + id)
   const [selectedDate, setSelectedDate] = useState(todayDateString);
   const [startTime, setStartTime] = useState(null);
   const [duration, setDuration] = useState(null);
+  const [mode, setMode] = useState(null);
   const [timeSlots, setTimeSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
@@ -70,16 +94,30 @@ const AddTimeSlot = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [serviceType,setServiceType]=useState('');
   const [numberOfPeople, setNumberOfPeople] = useState("");
-  const [selectedDates, setSelectedDates] = useState([]);
   const [serviceAreaLocations, setServiceAreaLocations] = useState([]);
-  const [serviceAreaLocation, setServiceAreaLocation] = useState(""); // Track selected service area
   const [selectedServiceAreas, setSelectedServiceAreas] = useState([]); // Array to store selected service areas
   const [selectedLocationDetails, setSelectedLocationDetails] = useState(null);
-
+  const [location, setLocation] = useState(defaultLocation);
+  const autocompleteRef = useRef(null);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [openStart, setOpenStart] = useState(false);
   const [openEnd, setOpenEnd] = useState(false);
+  const [showAddLocationModal, setShowAddLocationModal] = useState(false);
+  const [showAddPriceModal, setShowAddPriceModal] = useState(false);
+
+  const [radius, setRadius] = useState(null);
+  const [name, setName] = useState("");
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [PriceData, setPriceData] = useState([]);
+  const [selectedPriceId, setSelectedPriceId] = useState(null); // Store the selected package ID
+  const [selectedDuration, setSelectedDuration] = useState(""); // Store the selected package duration
+  const [priceType,setpriceType]=useState('');
+  const [packageType,setpackageType]=useState('');
+  const [private_PricePerDayPerRerson, setprivate_PricePerDayPerRerson] = useState("");
+  const [group_PricePerDayPerRerson, setgroup_PricePerDayPerRerson] = useState("");
+
+  
   useEffect(() => {
     const handleBackPress = () => {
       if (navigation.isFocused()) {
@@ -88,8 +126,7 @@ const AddTimeSlot = ({ navigation, route }) => {
       }
       return false;
     };
-
-  
+ 
     BackHandler.addEventListener("hardwareBackPress", handleBackPress);
 
     return () => {
@@ -97,36 +134,50 @@ const AddTimeSlot = ({ navigation, route }) => {
     };
   }, [navigation]);
 
-  const markedDates = {
-    [selectedDate]: {
-      selected: true,
-      selectedColor: "rgba(102, 42, 178, 1)",
-      customTextStyle: {
-        color: "orange",
-      },
-    },
+
+  const showDatePicker = () => setDatePickerVisibility(true);
+
+  const hideDatePicker = () => {
+    setShowStartTimePicker(false); // Close the modal
   };
-
-  const today = new Date();
-  const nextSixDays = new Date();
-  nextSixDays.setDate(today.getDate() + 2);
-
-  const minDate = today.toISOString().split("T")[0];
-  const maxDate = nextSixDays.toISOString().split("T")[0];
-
-  const handleDayPress = (day) => {
-    setSelectedDate(day.dateString);
-  };
-
-  const handleStartTimeChange = (event, selectedTime) => {
-    const currentTime = selectedTime || startTime; // Use the new time or the previous time if canceled
+  const handleConfirm = (time) => {
+    // Get the current time
+    const currentTime = new Date();
+    const adjustedTime = new Date(currentTime);
+    adjustedTime.setHours(time.getHours(), time.getMinutes(), 0, 0);  
     setShowStartTimePicker(false);
-
-    setStartTime(currentTime);
   
-    // if (duration) {
-    //   generateTimeSlots(currentTime, duration);
-    // }
+    if (startDate && startDate.toDateString() === currentTime.toDateString()) {
+      if (adjustedTime < currentTime) {
+        alert("Please select a future time.");
+        return; // Stop further execution if time is in the past
+      }
+    }
+  
+    // If everything is okay, set the start time
+    setStartTime(adjustedTime);
+  };
+  
+  const fetchPrice = async (tutorId) => {
+    try {
+      const res = await dispatch(getPrice(tutorId)); // Replace getPrice with your actual Redux action or API call
+  
+      if (res.success) {
+        const formattedPriceData = res.data.map((item) => ({
+          key: item.id, 
+          value: item.durationType, 
+          duration: item.durationType, 
+        }));
+        setPriceData(formattedPriceData);    
+         } else {
+       
+        ToastAndroid.show("Failed to fetch price.",ToastAndroid.SHORT)
+      }
+    } catch (error) {
+     
+      ToastAndroid.show("Failed to fetch price.",ToastAndroid.SHORT)
+
+    }
   };
 
   const fetchServiceAreas = async (id) => {
@@ -164,105 +215,61 @@ const AddTimeSlot = ({ navigation, route }) => {
     }
   };
 
-  // const generateTimeSlots = (startTime, duration) => {
-  //   const slots = [];
-  //   const start = new Date(startTime);
-    
-  //   for (let i = 0; i < 24 * 60; i += duration) {
-  //     const end = new Date(start.getTime() + duration * 60000);
-  //     slots.push({ start: new Date(start), end });
-  //     start.setMinutes(start.getMinutes() + duration);
-  //   }
-    
-  //   setTimeSlots(slots);
-  // };
   useEffect(() => {
-    // Fetch service areas when the component mounts
-    fetchServiceAreas(id); // Pass id into fetchServiceAreas
+    // Call both functions when the component mounts or `id` changes
+    fetchServiceAreas(id);
+    fetchPrice(id);
   }, [id]);
 
-  const handleEndTimeChange = (event, selectedDate) => {
-    const currentTime = selectedDate || endTime;
-    setShowEndTimePicker(false);
-    setEndTime(currentTime);
-  };
 
-  // const createTimeSlots = () => {
-  //   if (!startTime || !endTime || !duration) {
-  //     // Toast.show({
-  //     //   type: "error",
-  //     //   text1: "Please select start time, end time, and duration.",
-  //     //   visibilityTime: 2000,
-  //     //   autoHide: true,
-  //     // });
-
-  //     ToastAndroid.show("Please select start time, end time, and duration.",ToastAndroid.SHORT)
-  //     return;
-  //   }
-
-  //   let start = new Date(startTime);
-  //   const end = new Date(endTime);
-  //   const slots = [];
-  //   const durationInMinutes = parseInt(duration, 10);
-
-  //   while (start < end) {
-  //     const endSlot = new Date(start.getTime() + durationInMinutes * 60000);
-  //     if (endSlot <= end) {
-  //       slots.push({ start: new Date(start), end: endSlot });
-  //     }
-  //     start = endSlot;
-  //   }
-
-  //   setTimeSlots(slots);
-  // };
-
-  const handleServiceTypeChange = (value) => {
-    setServiceType(value);
-    if (value === "Private") {
-      setNumberOfPeople("1");
-    } else {
-      setNumberOfPeople("");
+  useEffect(() => {
+    if (startDate) {
     }
-  };
+  }, [startDate]);
+  
+const handleLocationSelect = (data, details) => {
+  // const locationName=details?.formatted_address;
+  const { lat, lng } = details.geometry.location;
+  setLocation({
+    latitude: parseFloat(lat.toFixed(7)),
+    longitude: parseFloat(lng.toFixed(7)),
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
+  setName(details.formatted_address);
+  autocompleteRef.current?.setAddressText(details.formatted_address);
+
+};
+
+    const handleServiceTypeChange = (value) => {
+      setServiceType(value);
+      if (value === "Private") {
+        setNumberOfPeople("1");
+      } else {
+        setNumberOfPeople("");
+      }
+    };
 
   const handleSubmit = async () => {
     try {
-        console.log('handleSubmit started');
-        console.log('Selected Slot:', selectedSlot);
         
-        // Check if a time slot has been selected
       
 
         setLoading(true);
-        console.log('Loading set to true');
-
-        // Ensure a service area is selected
-      
-        
-        // Ensure all required inputs are filled
-        if (!startTime || !duration || !serviceType || !startDate || !endDate || !numberOfPeople) {
+       if (!startTime || !duration || !serviceType || !startDate || !endDate || !numberOfPeople || !mode) {
             ToastAndroid.show("Please fill all the fields.", ToastAndroid.SHORT);
-            console.log('Missing required fields: ', {
-                startTime,
-                duration,
-                serviceType,
-                startDate,
-                endDate,
-                numberOfPeople,
-            });
+          
             setLoading(false);
             return;
         }
         
         // Format selected time slots
         const formattedStartTime = formatTime(startTime); // Assuming `selectedSlot.start` is the time you want to format
-        console.log('Formatted Start Time:', formattedStartTime);
 
         
 
       if (selectedServiceAreas.length === 0) {
         ToastAndroid.show("Please select at least one service area.", ToastAndroid.SHORT);
-        console.log('No service area selected');
         setLoading(false);
         return;
     }
@@ -282,50 +289,111 @@ const AddTimeSlot = ({ navigation, route }) => {
             }
         });
 
-        console.log("New Service Area:", newServiceArea);
       
         const serviceAreaId = newServiceArea.key;
-        
-        // Construct the payload to send
+        const classMode = (mode === 'Online') ? true : false;
+     
+          const maxSeats = serviceType === "Group" ? 10 : 1;
+          const availableSeat = serviceType === "Private" ? 1 : maxSeats - parseInt(numberOfPeople, 10);
+          if (availableSeat < 0) {
+          ToastAndroid.show("Invalid number of people for selected service type.", ToastAndroid.SHORT);
+            setSubmitting(false);
+            return;
+          }
+
+          if (!selectedPriceId) {
+            ToastAndroid.show("Please select a price.", ToastAndroid.SHORT);
+            setLoading(false);
+            return;
+          }
+
+          // Calculate the endDate based on the selected duration
+          let calculatedEndDate = endDate;
+              
+          if (selectedDuration) {
+            const [period, days] = selectedDuration.split(" "); // Extract period (e.g., "monthly", "weekly") and number of days
+            const numberOfDays = parseInt(days, 10); // Convert the number of days to integer
+            console.log(`Parsed Duration - Period: ${period}, Days: ${numberOfDays}`);
+      
+            if (!isNaN(numberOfDays)) {
+              // If the duration is valid (has number of days)
+              calculatedEndDate = new Date(startDate); // Start date
+              calculatedEndDate.setDate(calculatedEndDate.getDate() + numberOfDays); // Add the number of days
+              console.log("Calculated End Date: ", calculatedEndDate);
+            } else {
+              // If the duration is invalid (e.g., cannot parse the number of days)
+              calculatedEndDate = endDate; // Keep the original endDate
+              console.log("Error: Invalid duration format.");
+            }
+          }
+      
+
         const payload = {
             startTime: formattedStartTime,
-            startDate: startDate.toISOString().split("T")[0],
-            endDate: endDate.toISOString().split("T")[0],
+            startDate: new Date(startDate).toISOString().split("T")[0],
+            endDate: calculatedEndDate.toISOString().split("T")[0], // Use dynamically calculated endDate
             timeDurationInMin: parseInt(duration, 10),
             serviceType,
             serviceAreaId,
-            noOfPeople: parseInt(numberOfPeople, 10),
+            availableSeat: availableSeat.toString(),
             id : id,
-        };
+            isOnline : classMode,
+            priceId: selectedPriceId, // Include selectedPriceId
 
-        // Log the payload for testing
-        console.log("Payload to be sent:", payload);
+        };
+         console.log("payload :"+  JSON.stringify(payload))
 
         const res = await dispatch(addTimeSlot(payload));
-        console.log('Response from addTimeSlot:', res);
 
 
         if (res.success) {
           ToastAndroid.show(res.message, ToastAndroid.SHORT);
-          console.log('Success message:', res.message);
           navigation.goBack();
       } else {
           // Check for specific error message
           if (res.message === "Please select appropriate date!") {
               ToastAndroid.show("Please select appropriate date and time.", ToastAndroid.SHORT);
           } else {
-              console.log('Error response received:', res.message);
               ToastAndroid.show(res.message, ToastAndroid.SHORT);
           }
+        
       }
-    } catch (error) {
+
+    }
+    catch (error) {
         // If an error occurs during the process, show an error message
         ToastAndroid.show(error.message || "Something went wrong.", ToastAndroid.SHORT);
         console.error('Error in handleSubmit:', error);
     } finally {
-        console.log('Setting loading to false');
         setLoading(false);
     }
+  
+};  
+
+const priceTypeItems = [
+  { key: "1", value: "Subscription Price" },
+  { key: "2", value: "Freemium Price" },
+  { key: "3", value: "Fixed Price" },
+  { key: "4", value: "Dynamic Price" },
+];
+
+
+const packageTypeItems = [
+  { key: "1", value: "monthly 25" },
+  { key: "2", value: "weekly 6" },
+  { key: "3", value: "monthly 30" },
+  { key: "4", value: "weekly 7" },
+  { key: "5", value: "daily" },
+];
+
+const handlepackageType = (value) => {
+  setpackageType(value);
+ 
+};
+
+const handlepriceType = (value) => {
+  setpriceType(value);
+ 
 };
 
   const formatTime = (time) => {
@@ -334,61 +402,16 @@ const AddTimeSlot = ({ navigation, route }) => {
     const minutes = time.getMinutes().toString().padStart(2, "0");
     return `${hours}:${minutes}`;
   };
-  const theme = {
-    calendarBackground: COLORS.white,
-    textSectionTitleColor: COLORS.primary,
-    selectedDayTextColor: "white",
-    dayTextColor: "black",
-    textDisabledColor: "gray",
-    dotColor: "orange",
-    arrowColor: "black",
-    monthTextColor: "black",
-    textDayFontWeight: "300",
-    textMonthFontWeight: "bold",
-    textDayHeaderFontWeight: "300",
-    todayTextColor: "black",
-    textDayFontSize: 16,
+ 
+
+  const handleClassMode = (selected) => {
+  setMode(selected);  
+    // // Generate slots if start time is already set
+    // if (startTime) {
+    //   generateTimeSlots(startTime, selectedDuration);
+    // }
   };
 
-  const handleSlotSelect = (index) => {
-    setSelectedSlot(index);
-  };
-
-
- // Helper function to get the start of the current week (Monday)
- const getWeekStartDate = () => {
-  const date = new Date();
-  const day = date.getDay();
-  const diff = (day >= 1 ? day - 1 : 6) * 24 * 60 * 60 * 1000;
-  return new Date(date.getTime() - diff).toISOString().split("T")[0];
-};
-
-// Helper function to get dates of the current week (Monday to Sunday)
-const getWeekDates = () => {
-  const startOfWeek = new Date(getWeekStartDate());
-  return Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(startOfWeek);
-    date.setDate(startOfWeek.getDate() + i);
-    return {
-      date: date.toISOString().split("T")[0],
-      day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-    };
-  });
-};
-
-const weekDates = getWeekDates();
-
-const handleTabPress = (date) => {
-  setSelectedDates((prevSelectedDates) => {
-    if (prevSelectedDates.includes(date)) {
-      // Remove date if it's already selected
-      return prevSelectedDates.filter((d) => d !== date);
-    } else {
-      // Add date if it's not selected
-      return [...prevSelectedDates, date];
-    }
-  });
-};
 
 const handleDurationChange = (selectedDuration) => {
   setDuration(selectedDuration);
@@ -400,36 +423,165 @@ const handleDurationChange = (selectedDuration) => {
 };
 
 const handleSelection = (val) => {
-  console.log('Selected Value:', val); // Log the selected value
 
-  // Check if the service area is already selected
   const isAlreadySelected = selectedServiceAreas.includes(val);
   
   if (isAlreadySelected) {
       // If it is already selected, remove it from the array
       setSelectedServiceAreas(selectedServiceAreas.filter(area => area !== val));
-      console.log('Removed Service Area:', val);
   } else {
       // If not selected, add to the array
       setSelectedServiceAreas([...selectedServiceAreas, val]);
-      console.log('Added Service Area:', val);
   }
 
   // Find the corresponding location details
   const selectedLocation = serviceAreaLocations.find(location => location.value === val);
   
   if (selectedLocation) {
-      console.log('Selected Location:', selectedLocation); // Log the selected location
-      // You might want to update the selected location details as well
       setSelectedLocationDetails(selectedLocation); // Update state with the selected location details
   } else {
-      console.log('Location not found for:', val);
       setSelectedLocationDetails(null); // Clear if not found
   }
 };
 
+const handleSelectDistance = (value) => {
+  setRadius(value);
+};
 
-  // console.log(selectedSlots);
+const handleAddLocationPress = () => setShowAddLocationModal(true);
+const handleAddPricePress = () => setShowAddPriceModal(true);
+
+
+const handlePriceAdd = async () => {
+  try {
+
+    setLoading(true);
+
+    // Validate inputs
+    if (!packageType) {
+        ToastAndroid.show("Package Type is required", ToastAndroid.SHORT);
+        return;
+    }
+
+    if (!priceType) {
+        ToastAndroid.show("Price Type is required", ToastAndroid.SHORT);
+        return;
+    }
+
+    // Calculate total prices based on duration type
+    let multiplier = 1; // Default multiplier
+    switch (packageType) {
+        case "monthly 25":
+            multiplier = 25;
+            break;
+        case "monthly 30":
+            multiplier = 30;
+            break;
+        case "weekly 7":
+            multiplier = 7;
+            break;
+        case "weekly 6":
+            multiplier = 6;
+            break;
+        case "daily":
+            multiplier = 1;
+            break;
+        default:
+            ToastAndroid.show("Invalid Package Type", ToastAndroid.SHORT);
+            return;
+    }
+
+    const privateTotal = private_PricePerDayPerRerson
+        ? parseFloat(private_PricePerDayPerRerson) * multiplier
+        : 0;
+
+    const groupTotal = parseFloat(group_PricePerDayPerRerson) * multiplier;
+
+
+    // Prepare price data for dispatch
+    const priceData = {
+        id: id,
+        priceName: priceType,
+        durationType: packageType,
+        private_PricePerDayPerRerson: private_PricePerDayPerRerson,
+        group_PricePerDayPerRerson: group_PricePerDayPerRerson,
+        group_totalPricePerPerson: groupTotal.toFixed(2),
+        private_totalPricePerPerson: privateTotal.toFixed(2),
+    };
+
+
+    // Dispatch addTutorPrice action
+    const response = await dispatch(addTutorPrice(priceData));
+    ToastAndroid.show(response.message, ToastAndroid.SHORT);
+  
+
+} catch (error) {
+    // Handle any errors that occur
+    const errorMessage =
+        error?.response?.data?.message || error.message || "Something went wrong.";
+    console.error('Error in handleSubmit:', errorMessage);
+    ToastAndroid.show(errorMessage, ToastAndroid.SHORT);
+} finally {
+    setLoading(false);
+}
+
+setShowAddPriceModal(false);
+
+};
+
+const handleLocationAdd = async () => {
+  setLoading(true);
+  if (!name) {
+    Toast.show({
+      type: "error",
+      text1: "Service area is required",
+      visibilityTime: 2000,
+      autoHide: true,
+    });
+    setSubmitting(false);
+    return;
+  }
+
+  if (!radius) {
+    Toast.show({
+      type: "error",
+      text1: "Distance is required",
+      visibilityTime: 2000,
+      autoHide: true,
+    });
+    setSubmitting(false);
+    return;
+  }
+  const locationData = {
+    id: id,
+    latitude: String(location.latitude),
+    longitude: String(location.longitude),
+    locationName: name,
+    radius: String(radius),
+    unit: "km",
+  };
+  dispatch(addTutorLocation(locationData))
+    .then((res) => {
+      ToastAndroid.show(res.message,ToastAndroid.SHORT)
+      fetchServiceAreas(id);
+    })
+    .catch((error) => {
+      console.error("Error adding tutor location:", error);
+      ToastAndroid.show('An error occurred. Please try again.',ToastAndroid.SHORT)
+
+    });
+  setLoading(false);
+  setShowAddLocationModal(false);
+};
+
+const handleSelectionprice = (selectedKey) => {
+  setSelectedPriceId(selectedKey); // Save selected package ID
+  const selectedPackage = PriceData.find((item) => item.key === selectedKey);
+  if (selectedPackage) {
+    setSelectedDuration(selectedPackage.duration); // Save selected package duration
+  }
+};
+
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.container}>
           <StatusBar backgroundColor={COLORS.primary} style="light" />
@@ -440,44 +592,19 @@ const handleSelection = (val) => {
         />
       </View>
 
-      <ScrollView>
-        {/* <View style={{ width: "100%" }}> */}
-          {/* <Calendar
-            theme={theme}
-            markedDates={markedDates}
-            onDayPress={handleDayPress}
-            minDate={minDate}
-            maxDate={maxDate}
-          />
-        </View> */}
-
-     {/* <View style={styles.tabContainer}>
-          {weekDates.map((day) => (
-            <TouchableOpacity
-              key={day.date}
-              style={[
-                styles.tab,
-                selectedDates.includes(day.date) && styles.selectedTab
-              ]}
-              onPress={() => handleTabPress(day.date)}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  selectedDates.includes(day.date) && styles.selectedTabText
-                ]}
-              >
-                {day.day}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View> */}
+   
+       <ScrollView>
 
         <View style={{ paddingHorizontal: 15 }}>
         <View style={{ marginTop: 10 }}>
+            <View style={{flexDirection:'row',justifyContent:'space-between'}}>
             <Text style={styles.label}>
              Service Area Location
             </Text>
+            <TouchableOpacity onPress={handleAddLocationPress} style={styles.addButton}>
+            <Text style={styles.addButtonText}>+ Add Location</Text>
+          </TouchableOpacity>
+          </View>
             <SelectList
             setSelected={handleSelection}
            data={serviceAreaLocations}
@@ -489,14 +616,293 @@ const handleSelection = (val) => {
           </View>
 
           <View style={{ marginTop: 10 }}>
+            <View style={{flexDirection:'row',justifyContent:'space-between'}}>
             <Text style={styles.label}>
-              Service Type
+             Pacakge Type
+            </Text>
+            <TouchableOpacity onPress={handleAddPricePress} style={styles.addButton}>
+            <Text style={styles.addButtonText}>+ Add Price</Text>
+          </TouchableOpacity>
+          </View>
+            <SelectList
+            setSelected={handleSelectionprice}
+           data={PriceData}
+              save="key"
+        
+              placeholder="Select Package Type"
+              boxStyles={styles.dropdown}
+              fontFamily="Poppins"
+            />
+          </View>
+        
+       
+
+        {/* Modal for Adding Location */}
+        <Modal visible={showAddLocationModal} animationType="slide" transparent={true}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add Location</Text>
+              <View style={styles.autocompleteContainer}>
+              <GooglePlacesAutocomplete
+           ref={autocompleteRef}
+
+          placeholder="Search by location"
+          onPress={handleLocationSelect}
+          query={{
+            key: GOOGLE_MAPS_APIKEY,
+            language: "en",
+          }}
+          fetchDetails={true}
+          textInputProps={{
+            style: {
+              borderColor:  "#000",
+              borderWidth: 1,
+              height: 40,
+              borderRadius: 5,
+              paddingHorizontal: 10,
+              width: "100%",
+            },
+          }}
+          styles={{
+            container: { flex: 0 },
+            listView: { 
+              position: 'absolute', 
+              top: 45, 
+              zIndex: 10, 
+              elevation: 10 // For Android
+            },
+          }}
+        />
+        </View>
+             
+              <View>
+              {location && (
+        <View style={styles.mapWrapper}>
+          <MapView style={styles.map} region={location}>
+            <Marker coordinate={location} />
+            <Circle
+              center={location}
+              radius={radius}
+              fillColor="rgba(135,206,250,0.5)"
+              strokeColor="rgba(135,206,250,1)"
+            />
+          </MapView>
+        </View>
+      )}
+      <View style={{alignContent:'center'}}>
+       <FlatList
+        data={distances}
+        keyExtractor={(item) => item.id.toString()}
+        horizontal
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[
+              styles.distanceButton,
+              item.value === radius
+                ? styles.selectedDistanceButton
+                : styles.unselectedDistanceButton,
+            ]}
+            onPress={() => handleSelectDistance(item.value)}
+          >
+            <Text
+              style={[
+                styles.distanceButtonText,
+                item.value === radius
+                  ? styles.selectedDistanceButtonText
+                  : styles.unselectedDistanceButtonText,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        )}
+        contentContainerStyle={styles.distanceList}
+      />
+      </View>
+        </View>
+        <View style={{ flexDirection: 'row',marginTop:20 }}>
+  <TouchableOpacity
+    onPress={handleLocationAdd}
+    style={{
+      backgroundColor: COLORS.directions,
+      padding: 5,
+      borderRadius: 5,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 10,
+      height:40,
+      width:'49%'
+    }}
+  >
+    {loading ? (
+      <ActivityIndicator size="small" color="#fff" />
+    ) : (
+      <Text style={{ color: '#fff',fontFamily:'Poppins',fontSize:13 }}>Add Location</Text>
+    )}
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() => setShowAddLocationModal(false)}
+    style={{
+      padding: 5,
+      borderRadius: 5,
+      borderColor:COLORS.directions,
+      borderWidth:1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      width:'49%',
+      height:40,
+    }}
+  >
+    <Text style={{ color: COLORS.primary,fontFamily:'Poppins',fontSize:13  }}>Cancel</Text>
+  </TouchableOpacity>
+</View>
+              </View>
+            </View>
+          
+        </Modal>
+
+       {/* Modal for Adding Price */}
+
+       <Modal visible={showAddPriceModal} animationType="slide" transparent={true}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add Price</Text>
+             
+              <View style={{}}>
+        <View style={{ marginTop: 10 }}>
+            <Text style={styles.label}>
+            Price Type
+            </Text>
+           
+            <SelectList
+            setSelected={handlepriceType}
+           data={priceTypeItems}
+              save="value"
+              placeholder="Select Price Type"
+              boxStyles={styles.dropdown}
+              fontFamily="Poppins"
+            />
+          </View>
+        
+       
+
+          <View style={{ marginTop: 10 }}>
+            <Text style={styles.label}>
+             Package Type
+            </Text>
+            <SelectList
+            setSelected={handlepackageType}
+           data={packageTypeItems}
+              save="value"
+              placeholder="Select Package Type"
+              boxStyles={styles.dropdown}
+              fontFamily="Poppins"
+            />
+          </View>
+
+        
+          
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontFamily: "Poppins", fontSize: 14 }}>
+                Private Price Per Person Per Day
+              </Text>
+              <TextInput
+                   style={styles.timePickerButton}
+                value={private_PricePerDayPerRerson}
+                onChangeText={setprivate_PricePerDayPerRerson}
+                placeholder="Enter Private Price Per day per person"
+                keyboardType="numeric"
+              />
+            </View>
+              
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontFamily: "Poppins", fontSize: 14 }}>
+                Group Price Per Person Per Day
+              </Text>
+              <TextInput
+                   style={styles.timePickerButton}
+                value={group_PricePerDayPerRerson}
+                onChangeText={setgroup_PricePerDayPerRerson}
+                placeholder="Enter Group price per day per person"
+                keyboardType="numeric"
+              />
+            </View>
+          
+
+      
+         
+        </View>
+        
+        
+        <View style={{ flexDirection: 'row',marginTop:20 }}>
+  <TouchableOpacity
+    onPress={handlePriceAdd}
+    style={{
+      backgroundColor: COLORS.directions,
+      padding: 5,
+      borderRadius: 5,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 10,
+      height:40,
+      width:'49%'
+    }}
+  >
+    {loading ? (
+      <ActivityIndicator size="small" color="#fff" />
+    ) : (
+      <Text style={{ color: '#fff',fontFamily:'Poppins',fontSize:13 }}>Add Price</Text>
+    )}
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() => setShowAddPriceModal(false)}
+    style={{
+      padding: 5,
+      borderRadius: 5,
+      borderColor:COLORS.directions,
+      borderWidth:1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      width:'49%',
+      height:40,
+    }}
+  >
+    <Text style={{ color: COLORS.primary,fontFamily:'Poppins',fontSize:13  }}>Cancel</Text>
+  </TouchableOpacity>
+</View>
+              </View>
+            </View>
+          
+        </Modal>
+
+
+
+        <View style={{ marginTop: 10 }}>
+            <Text style={styles.label}>
+              Class Mode
+            </Text>
+            <SelectList
+              setSelected={handleClassMode}
+              data={classmodeType}
+              save="value"
+              placeholder="Select Class Mode"
+              boxStyles={styles.dropdown}
+              fontFamily="Poppins"
+            />
+          </View>
+
+       
+          <View style={{ marginTop: 10 }}>
+            <Text style={styles.label}>
+              Class Type
             </Text>
             <SelectList
               setSelected={handleServiceTypeChange}
               data={serviceTypeItems}
               save="value"
-              placeholder="Select Service Type"
+              placeholder="Select Class Type"
               boxStyles={styles.dropdown}
               fontFamily="Poppins"
             />
@@ -517,54 +923,7 @@ const handleSelection = (val) => {
             </View>
           )}
          <View style={{flexDirection:'row'}}>
-          {/* <View style={{ marginTop: 10 }}>
-            <Text style={{ fontFamily: "Poppins", fontSize: 14 }}>
-             Service Area Location
-            </Text>
-            <SelectList
-              setSelected={handleServiceTypeChange}
-              data={serviceAreaLocation}
-              save="value"
-              placeholder="Select Service Area Location"
-              boxStyles={styles.dropdown}
-              fontFamily="Poppins"
-            />
-          </View> */}
-
-          
-          {/* <View style={{ marginTop: 10 }}>
-            <Text style={{ fontFamily: "Poppins", fontSize: 14 }}>
-             Start Date
-            </Text>
-            {/* <TextInput
-             style={styles.timePickerButton}
-                value={numberOfPeople}
-                onChangeText={setNumberOfPeople}
-                placeholder="Enter number of people"
-                keyboardType="numeric"
-              /> */}
-               {/* <TouchableOpacity
-        style={styles.timePickerButton}
-        onPress={() => setOpen(true)} // Open date picker when button is pressed
-      >
-        <Text style={styles.buttonText}>
-          {date ? date.toLocaleDateString() : 'Enter Start Date'}
-        </Text>
-      </TouchableOpacity> */}
-      {/* <DatePicker
-        modal
-        open={open}
-        date={date}
-        mode="date" // Specify date mode
-        onConfirm={(selectedDate) => {
-          setOpen(false);
-          setDate(selectedDate); // Update the selected date
-        }}
-        onCancel={() => {
-          setOpen(false);
-        }}
-      />
-          </View> */} 
+        
 
 <View style={{ marginTop: 10 }}>
         <Text style={styles.label}>
@@ -574,7 +933,7 @@ const handleSelection = (val) => {
           style={[styles.timePickerButton,{width:SCREEN_WIDTH/2.2}]}
           onPress={() => setOpenStart(true)} // Open Start Date Picker
         >
-          <Text style={styles.buttonText}>
+          <Text style={{margin:0,padding:0}}>
             {startDate ? startDate.toLocaleDateString() : 'Enter Start Date'}
           </Text>
         </TouchableOpacity>
@@ -582,15 +941,21 @@ const handleSelection = (val) => {
           modal
           open={openStart}
           date={startDate}
-          mode="date" // Date mode for picking date
+          mode="date"
+          minimumDate={new Date()}
           onConfirm={(selectedDate) => {
+            const dateOnlyString = selectedDate.toISOString().split('T')[0];
+            const dateOnly = new Date(dateOnlyString); // Recreate date as 'YYYY-MM-DD' without time zone influence
+        
+       
             setOpenStart(false);
-            setStartDate(selectedDate); // Set selected Start Date
+            setStartDate(new Date(dateOnly)); // Set selected Start Date
           }}
           onCancel={() => {
             setOpenStart(false);
           }}
         />
+        
       </View>
 
           {/* <View style={{ marginTop: 10 }}>
@@ -605,7 +970,7 @@ const handleSelection = (val) => {
                 keyboardType="numeric"
               />
           </View> */}
-            <View style={{ marginTop: 10,marginLeft:10 }}>
+            {/* <View style={{ marginTop: 10,marginLeft:10 }}>
         <Text style={styles.label}>
           End Date
         </Text>
@@ -621,20 +986,25 @@ const handleSelection = (val) => {
           modal
           open={openEnd}
           date={endDate}
-          mode="date" // Date mode for picking date
+          mode="date" 
+          minimumDate={startDate || new Date()}
           onConfirm={(selectedDate) => {
+            const dateOnlyString = selectedDate.toISOString().split('T')[0];
+            const dateOnly = new Date(dateOnlyString); // Recreate date as 'YYYY-MM-DD' without time zone influence
+        
             setOpenEnd(false);
-            setEndDate(selectedDate); // Set selected End Date
+            setEndDate(new Date(dateOnly)); // Set selected End Date
           }}
           onCancel={() => {
             setOpenEnd(false);
           }}
+        
         />
-      </View>
+      </View> */}
           </View>
      
          
-          <View style={{ marginTop: 10 }}>
+          {/* <View style={{ marginTop: 10 }}>
             <Text style={styles.label}>
               Start Time
             </Text>
@@ -647,35 +1017,51 @@ const handleSelection = (val) => {
               </Text>
             </TouchableOpacity>
             {showStartTimePicker && (
-              <DateTimePicker
-                value={startTime || new Date()}
-                mode="time"
-                display="default"
-                onChange={handleStartTimeChange}
-              />
-            )}
-          </View>
-          {/* <View style={{ marginTop: 10 }}>
-            <Text style={{ fontFamily: "Poppins", fontSize: 14 }}>
-              End Time
-            </Text>
-            <TouchableOpacity
-              style={styles.timePickerButton}
-              onPress={() => setShowEndTimePicker(true)}
-            >
-              <Text style={styles.timePickerText}>
-                {endTime ? formatTime(endTime) : "Select End Time"}
-              </Text>
-            </TouchableOpacity>
-            {showEndTimePicker && (
-              <DateTimePicker
-                value={endTime || new Date()}
-                mode="time"
-                display="default"
-                onChange={handleEndTimeChange}
-              />
+              
+              <DateTimePickerModal
+              isVisible={showStartTimePicker} // This controls the visibility
+              mode="time" // Time picker mode
+              onConfirm={handleConfirm} // Handle confirm action
+              onCancel={hideDatePicker} // Handle cancel action
+              textColor="red" // Customize text color
+              customStyles={{
+                content: {
+                  backgroundColor: 'red', // Modal background color
+                  borderRadius: 10, // Rounded corners for the modal
+                },
+                datePicker: {
+                  backgroundColor: 'green', // Picker background color
+                },
+                dateText: {
+                  color: 'white', // Text color for the date/time values inside the picker
+                },
+              }}
+            />
+              
             )}
           </View> */}
+            <View style={{ marginTop: 10 }}>
+      <Text style={styles.label}>Start Time</Text>
+
+      {/* Button to show CustomTimePicker */}
+      <TouchableOpacity
+        style={styles.timePickerButton}
+        onPress={() => setShowStartTimePicker(true)} // Show the custom time picker
+      >
+        <Text style={styles.timePickerText}>
+          {startTime ? formatTime(startTime) : 'Select Start Time'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* CustomTimePicker for time selection */}
+      <CustomTimePickerWithClock
+        isVisible={showStartTimePicker}
+        onConfirm={handleConfirm}
+        onCancel={hideDatePicker}
+        selectedTime={startTime}
+      />
+    </View>
+        
           <View style={{ marginTop: 10 }}>
             <Text style={styles.label}>
               Duration (minutes)
@@ -691,30 +1077,7 @@ const handleSelection = (val) => {
           </View>
           
 
-          {timeSlots.length > 0 && (
-  <View style={styles.timeSlotList}>
-    {timeSlots.map((slot, index) => (
-      <TouchableOpacity
-        key={index}
-        style={[
-          styles.timeSlotItem,
-          selectedSlot === index ? styles.selectedSlot : styles.unselectedSlot,
-        ]}
-        onPress={() => handleSlotSelect(index)}
-      >
-        <Text
-          style={
-            selectedSlot === index
-              ? styles.selectedSlotText
-              : styles.unselectedSlotText
-          }
-        >
-          {`${formatTime(slot.start)} - ${formatTime(slot.end)}`}
-        </Text>
-      </TouchableOpacity>
-    ))}
-  </View>
-)}
+      
           <Button
             title={
               loading ? (
@@ -730,7 +1093,7 @@ const handleSelection = (val) => {
             onPress={handleSubmit}
           />
         </View>
-      </ScrollView>
+        </ScrollView>
     </KeyboardAvoidingView>
   );
 };
@@ -738,6 +1101,33 @@ const handleSelection = (val) => {
 export default AddTimeSlot;
 
 const styles = StyleSheet.create({
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mapWrapper: {
+    height: 200,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginVertical: 10,
+  },
+  autocompleteContainer: {
+    position: 'relative', 
+    zIndex: 10, // Ensure it's above other content
+    elevation: 10, // For Android
+  
+  },
+  distanceButton: {
+    padding: 8,
+    height: 35,
+    borderRadius: 5,
+    marginHorizontal: 10,
+    alignItems: "center",
+    alignContent:'center',
+    textAlign:'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    marginTop:10
+  },
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 10,
@@ -776,45 +1166,91 @@ const styles = StyleSheet.create({
     borderColor: "#000",
     borderRadius: 10,
     padding: 10,
-    marginVertical: 5,
+    marginBottom:10,
+    fontFamily:'Poppins'
+    // marginVertical: 5,
   },
   timePickerText: {
     color: "#333",
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily:'Poppins'
   },
   dropdown: {
-    marginVertical: 5,
+    marginVertical: 0,
   },
-  timeSlotList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginVertical: 20,
+  // timeSlotList: {
+  //   flexDirection: "row",
+  //   flexWrap: "wrap",
+  //   justifyContent: "space-between",
+  //   // marginVertical: 20,
+  // },
+  // timeSlotItem: {
+  //   width: "30%",
+  //   marginVertical: 5,
+  //   paddingVertical: 10,
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  //   borderRadius: 5,
+  // },
+  distanceButtonText: {
+    color: "#000",
+    fontSize: 13,
+    fontFamily: "Poppins",
   },
-  timeSlotItem: {
-    width: "30%",
-    marginVertical: 5,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 5,
+  selectedDistanceButtonText: {
+    color: "#fff",
   },
-  selectedSlot: {
-    backgroundColor: "rgba(102, 42, 178, 1)",
-  },
-  unselectedSlot: {
-    backgroundColor: "#fff",
-    borderColor: "gray",
-    borderWidth: 1,
-  },
-  selectedSlotText: {
-    color: "white",
-  },
-  unselectedSlotText: {
-    color: "black",
+  unselectedDistanceButtonText: {
+    color: "#000",
   },
   indicator: {
     position: "absolute",
     alignSelf: "center",
   },
+  label: {
+    fontFamily: 'Poppins',
+    fontSize: 14,
+    marginBottom: 5,
+  },
+  addButton: {
+    padding: 4,
+    // backgroundColor: '#',
+    borderRadius: 5,
+    marginLeft: 10,
+   
+  },
+  addButtonText: {
+    // color: '#fff',
+
+    fontFamily: 'Poppins-Medium',
+    fontSize: 13,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    // width: "100%",
+  },
+  modalTitle: {
+    fontFamily: 'Poppins',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  selectedDistanceButton: {
+    backgroundColor: "rgba(102, 42, 178, 1)",
+    borderColor: "rgba(102, 42, 178, 1)",
+  },
+  unselectedDistanceButton: {
+    backgroundColor: "#fff",
+    borderColor: "lightgray",
+  },
+ 
 });

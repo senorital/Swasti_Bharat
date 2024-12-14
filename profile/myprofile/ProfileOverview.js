@@ -9,7 +9,8 @@
     StatusBar,
     Linking,
     BackHandler,
-    ActivityIndicator
+    ActivityIndicator,
+    ToastAndroid
   } from "react-native";
   import { createShimmerPlaceholder } from "react-native-shimmer-placeholder";
   import LinearGradient from "expo-linear-gradient";
@@ -28,6 +29,7 @@ import {
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 import { useFocusEffect } from '@react-navigation/native';
+import NetInfo from '@react-native-community/netinfo'; // Import NetInfo
 
 const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
 
@@ -36,40 +38,49 @@ const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState(null);
     const [dob, setDob]  = useState(null);
+    const [totalExperienceInYears, settotalExperienceInYears]  = useState(null);
+  const [isConnected, setIsConnected] = useState(true); // Track network connectivity
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Check the network connection before fetching
+      const state = await NetInfo.fetch();
+      setIsConnected(state.isConnected); // Set network connection status
+
+      // If connected, proceed with API call
+      if (state.isConnected) {
         const res = await dispatch(getInstructor());
-        console.log('Instructor data:', res.data.data.dateOfBirth); 
         setDob(res.data.data.dateOfBirth);
-        setUser(res.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        const msg = error.response?.data?.message;
-        Toast.show({
-          type: "error",
-          text1: msg || "An error occurred. Please try again.",
-          visibilityTime: 2000,
-          autoHide: true,
-        });
-      } finally {
-        setLoading(false);
+        settotalExperienceInYears(res?.data?.data.totalExperienceInYears);
+        setUser(res?.data);
+      } else {
+        ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
       }
-    };
-  
-    useEffect(() => {
-   
+    } catch (error) {
+      const msg = error.response?.data?.message;
+      ToastAndroid.show(msg, ToastAndroid.SHORT);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Fetch data on initial load
+  useEffect(() => {
+    fetchData();
+  }, [dispatch]);
+
+  // Using useFocusEffect for fetching data when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
       fetchData();
-    }, [dispatch]);
+    }, [])
+  );
 
-    console.log('Instructor data dob:', dob); 
-    useFocusEffect(
-      React.useCallback(() => {
-        fetchData();
-      }, [])
-    );
+
+  
 
     useEffect(() => {
       const handleBackPress = () => {
@@ -91,40 +102,11 @@ const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
       Linking.openURL(url);
     };
 
-    const imageUrl = user && user.data.profilePic && user.data.profilePic.path
-    ? { uri: user.data.profilePic.path }
+    const imageUrl = user && user?.data?.profilePic && user?.data?.profilePic.path
+    ? { uri: user?.data?.profilePic.path }
     : require("../../assets/dAvatar.jpg");
 
-    if (loading) {
-      return (
-        <View style={{ marginTop: 100, paddingHorizontal: 20 }}>       
-        <View style={{ alignItems:'center'}}>
-          <ShimmerPlaceholder
-            style={{ borderRadius: 10, height: 95, width: wp(83) }}
-          />
-        </View>
-        <View style={{ marginVertical: 20 }}>
-          <View
-            style={{justifyContent:'center',alignItems:'center' }}
-          >
-            <ShimmerPlaceholder
-              style={{ borderRadius: 10, height: 350, width: wp(83) }}
-            />
-            <ShimmerPlaceholder
-              style={{
-                marginVertical:30,
-                borderRadius: 10,
-                height: 150,
-                width: wp(83),
-                marginLeft: 10,
-              }}
-            />
-          </View>
-         
-        </View>
-      </View>
-      );
-    }
+
 
     return (
       <View style={styles.container}>
@@ -141,19 +123,21 @@ const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
               <View style={styles.row}>
 
                 <Text style={styles.profileName}>
-                  {user && <>{user?.data.name}</>}
+                  {user && <>{user?.data?.name}</>}
                 </Text>
                 <MaterialIcons name="edit" size={20} color="#fff" style={styles.iconRight} onPress={() => navigation.navigate("EditProfile")} />
 
                 </View>
                 <Text style={styles.profileEmail}>
-                  {user && <>{user?.data.email}</>}
+                  {user && <>{user?.data?.email}</>}
                 </Text>
               </View>
             </View>      
             <Border color={COLORS.primary}  />
             </View>
             <View style={{ paddingHorizontal: 20,marginVertical:20,marginTop:40 }}>
+
+            {!loading ?  
               <View style={styles.textcontainer}>
                 {user?.data.email && (
                   <View>
@@ -188,6 +172,16 @@ const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
                     <Text style={styles.text}>{dob}</Text>
                   </View>
                 )}
+
+           {user?.data.totalExperienceInYears && (
+                  <View style={{ marginTop: 5 }}>
+                    <View style={styles.row}>
+                      <Text style={styles.headingText}>Total Years of Experience</Text>
+                    </View>
+                    <Text style={styles.text}>{totalExperienceInYears} Year</Text>
+                  </View>
+                )}
+
                 {(user?.data.linkedIn ||
                   user?.data.instagram ||
                   user?.data.twitter_x ||
@@ -238,14 +232,14 @@ const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
                   </View>
                 )}
 
-                </View>
-                {user?.bio && (
+               
+                {user?.data.bio && (
                   <View style={[styles.textcontainer,{marginTop:15}]}>
                   <View style={styles.row}>
                     <Text style={styles.headingText}>About me</Text>
                     </View>    
                     <Text style={[styles.text, { textAlign: "justify" }]}>
-                      {user.bio}
+                      {user.data.bio}
                     </Text>
                   </View>
                 )}
@@ -257,7 +251,32 @@ const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
                     </Text>
                   </View>
                 )}
-              </View>
+                
+              </View> :  
+              <View style={[styles.textcontainer]}>
+          
+        
+       
+      
+         <View style={{ marginTop: 5 }}>
+          
+           <ShimmerPlaceholder />
+           
+      
+<View style={{ marginTop: 5 }}>
+
+<ShimmerPlaceholder />
+</View>
+
+      
+        
+       
+
+       </View>
+      
+      </View>
+       }
+          </View>
             </View>
         </ScrollView>
       </View>

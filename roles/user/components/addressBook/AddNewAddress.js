@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, ActivityIndicator, StatusBar, BackHandler, ToastAndroid ,StyleSheet} from 'react-native';
+import { View, ScrollView, ActivityIndicator, StatusBar, BackHandler,Text,TouchableHighlight,ToastAndroid ,StyleSheet, TouchableOpacity} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -13,18 +13,17 @@ import {
     widthPercentageToDP as wp,
     heightPercentageToDP as hp,
   } from "react-native-responsive-screen";
-import Toast from 'react-native-toast-message';
 
 
-
-const AddNewAddress = ({ navigation }) => {
+const AddNewAddress = ({ navigation,route }) => {
   const dispatch = useDispatch();
-//   const address = useSelector((state) => state.address.addresses);
   const [loading1, setLoading1] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [onAlertOk, setOnAlertOk] = useState(() => () => {});
   const [boldText, setBoldText] = useState('');
+  const { latitude, longitude } = route.params;
+  const [selectedAddressType, setSelectedAddressType] = useState('Home'); 
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -42,8 +41,6 @@ const AddNewAddress = ({ navigation }) => {
     };
   }, [navigation]);
 
-
-  // Validation schema using Yup
   const validationSchema = Yup.object().shape({
     name: Yup.string()
     .min(3, 'Name must be at least 3 characters') // Ensure minimum length of 3
@@ -62,11 +59,12 @@ const AddNewAddress = ({ navigation }) => {
       setLoading1(true); // Show loading
       const payload = {
         ...values,
-        latitude: String(0.2), // Convert latitude to string
-        longitude: String(2.3), // Convert longitude to string
+        latitude: String(latitude), // Use latitude directly
+      longitude: String(longitude), // Use longitude directly
+      addressType: selectedAddressType, // Include selected address type
+
       };
       const response = await dispatch(addAddress(payload));
-      console.log("Add address response:", response);
       if (response?.status === 400) {
         ToastAndroid.show(response.message || 'Bad request. Please check your inputs.', ToastAndroid.SHORT);
       } else {
@@ -87,9 +85,9 @@ const AddNewAddress = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.primary} style="light" />
+      <StatusBar backgroundColor={COLORS.user_front_theme_color} style="dark" />
       <View style={{ paddingTop: 20 }}>
-        <Header title={"Add Address"} icon={icons.back} />
+        <Header title={"Enter Complete Address"} icon={icons.back} />
       </View>
 
       <Formik
@@ -101,6 +99,8 @@ const AddNewAddress = ({ navigation }) => {
           city: '',
           country: '',
           address: '',
+          addressType: '', // Initial value for address type
+
         }}
         validationSchema={validationSchema}
         onSubmit={handleSubmitForm}
@@ -108,10 +108,29 @@ const AddNewAddress = ({ navigation }) => {
         {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
           <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20 }}>
             <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Save Address as *</Text>
+               {/* Address Type Radio Buttons */}
+               <View style={styles.radioGroup}>
+                {['Home', 'Work', 'Hotel', 'Owner'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.radioCircle,
+                      selectedAddressType === type && styles.radioSelected,
+                    ]}         
+                       onPress={() => setSelectedAddressType(type)}
+                  >
+                   
+                    <Text style={styles.radioText}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            
+
               <Input
                 onChangeText={handleChange('name')}
                 onBlur={handleBlur('name')}
-                label="Save Address as *"
+                label="Name"
                 placeholder="Name"
                 value={values.name}
                 error={touched.name && errors.name}
@@ -161,35 +180,47 @@ const AddNewAddress = ({ navigation }) => {
                 value={values.country}
                 error={touched.country && errors.country}
               />
-              <Input
-                onChangeText={handleChange('address')}
-                onBlur={handleBlur('address')}
-                label="Address"
-                placeholder="Enter Your Address"
-                value={values.address}
-                multiline
-                numberOfLines={5}
-              />
+             <Input
+    onChangeText={handleChange('address')}
+    onBlur={handleBlur('address')}
+    label="Address"
+    placeholder="Enter Your Address"
+    value={values.address}
+    multiline
+    numberOfLines={5}
+    textAlignVertical="top"
+    inputContainerStyle={{
+      borderBottomWidth: 1,
+      borderBottomColor: '#ccc',
+    }}
+    inputStyle={{
+      padding: 20 , 
+      textAlignVertical: 'top',
+     
+    }}
+
+    containerStyle={{
+      marginTop: 20, // Apply margin from the top
+    }}
+  />
             </View>
 
             <Button
-              title={isSubmitting || loading1 ? (
-                <ActivityIndicator size="small" color="#ffffff" style={styles.indicator} />
-              ) : "Submit"}
+              title={
+                isSubmitting || loading1 ? (
+                  <ActivityIndicator size="small" color="#ffffff" style={styles.indicator} />
+                ) : (
+                  'Save address'
+                )
+              }
               onPress={handleSubmit}
             />
+
           </ScrollView>
         )}
       </Formik>
 
-      {/* <CustomAlertModal
-        visible={showAlert}
-        greeting="Hello,"
-        boldText={boldText}
-        message={alertMessage}
-        onCancel={() => setShowAlert(false)}
-        onOk={onAlertOk}
-      /> */}
+   
     </View>
   );
 };
@@ -197,6 +228,44 @@ const AddNewAddress = ({ navigation }) => {
 
 
 const styles = StyleSheet.create({
+  radioGroup: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  radioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  radioCircle: {
+    paddingVertical:4,
+    borderRadius:5,
+    paddingHorizontal:13,
+    borderWidth: 1,
+    marginBottom:8,
+    backgroundColor :'#ccc',
+    borderColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioSelected: {
+    backgroundColor:COLORS.primary,
+    color:COLORS.white,
+    borderColor:COLORS.primary,
+    borderWidth:1
+  },
+  radioText: {
+    fontSize: 14,
+    color: COLORS.white,
+    fontFamily:'Poppins',
+    textAlign:'center'
+  },
+  indicator: {
+    position: 'absolute',
+    alignSelf: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: "#fff",
@@ -210,6 +279,16 @@ const styles = StyleSheet.create({
     borderWidth:1,
     borderRadius:10 // Default border color
   },
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: -5,
+  },
   errorBorder: {
     borderColor: 'red',
     borderWidth:1,
@@ -222,7 +301,7 @@ const styles = StyleSheet.create({
     marginVertical: 5,
     color : COLORS.primary,
     fontSize: 14,
-    fontFamily: "Poppins_Medium",
+    fontFamily: "Poppins-Medium",
   },
   errorText: {
     fontFamily:'Poppins',

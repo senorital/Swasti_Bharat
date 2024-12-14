@@ -7,7 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
-  BackHandler,
+  BackHandler,Image,TextInput
 
 } from "react-native";
 import {
@@ -21,7 +21,7 @@ import { login, loginEmail } from "../../redux/actions/auth/auth";
 import * as Location from 'expo-location';
 import { setLocationAddress, clearLocationAddress } from "../../redux/actions/instructor/locationActions/locationActions";
 import DenyLocation from  "./DenyLocation"
-import { COLORS } from "../../components/constants";
+import { COLORS, icons } from "../../components/constants";
 import Button from "../../components/button/Button";
 import { useFocusEffect } from "@react-navigation/native";
 // Import a radio button component
@@ -37,23 +37,10 @@ const Login = ({ navigation }) => {
   const [inputs, setInputs] = useState({ email: "" });
   const [errors, setErrors] = useState({});
   const [showEmail, setShowEmail] = useState(false);
-  
-  const handleMobileNumberChange = (number) => {
-    // Remove any non-digit characters
-    const cleanedNumber = number.replace(/\D/g, '');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isButtonEnabled, setIsButtonEnabled] = useState(false);  // Button enablement state
 
-    // Only allow up to 10 digits
-    if (cleanedNumber.length <= 10) {
-      setMobileNumber(cleanedNumber); // Set mobile number only if length is <= 10
-    }
 
-    // Display error if the length is less than 10 digits (optional, based on your needs)
-    if (cleanedNumber.length < 10) {
-      setMobileNumberError('Mobile number must be 10 digits.');
-    } else {
-      setMobileNumberError('');
-    }
-  };
 
   const handleOnchange = (text, input) => {
     setInputs((prevState) => ({ ...prevState, [input]: text }));
@@ -76,6 +63,9 @@ const Login = ({ navigation }) => {
         BackHandler.removeEventListener('hardwareBackPress', onBackPress);
     }, [])
   );
+
+
+
 
   const getLocation = async () => {
     setLoading(true);
@@ -106,15 +96,15 @@ const Login = ({ navigation }) => {
       const location = await Location.getCurrentPositionAsync({});
       console.log("Location:", location);
       setLocation(location);
-
+      console.log("location.coords.latitude :" + location.coords.latitude)
       const geocode = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
       console.log("Geocode:", geocode);
       dispatch(setLocationAddress(geocode[0]));
-      // setRegion('US');
-      setRegion(geocode[0].isoCountryCode);
+      setRegion('US');
+      // setRegion(geocode[0].isoCountryCode);
 
       // setRegion('US');
     } catch (error) {
@@ -134,9 +124,9 @@ const Login = ({ navigation }) => {
 
   
 
-  useEffect(() => {
-    getLocation();
-  }, []);
+  // useEffect(() => {
+  //   getLocation();
+  // }, []);
 
 
 
@@ -150,7 +140,7 @@ const Login = ({ navigation }) => {
 
   const handleSubmit = async () => {
     let isValid = true;
-
+    console.log(mobileNumber)
     if (!mobileNumber) {
       setMobileNumberError("Please enter your mobile number");
       isValid = false;
@@ -160,14 +150,14 @@ const Login = ({ navigation }) => {
     } else {
       setMobileNumberError("");
     }
-
+   
     if (isValid && !loading) {
       setLoading(true);
       const formData = { phoneNumber: mobileNumber };
-
+      console.log("FormDdata :" + formData)
       try {
         const res = await dispatch(login(formData));
-        console.log("res", res);
+        console.log("res123", res);
         if (res && res.success) {
           navigation.navigate("Otp", { mobileNumber: mobileNumber, region: region });
         } else if (res && res.success === false && res.message === "NOTPRESENT!") {
@@ -239,14 +229,42 @@ const Login = ({ navigation }) => {
     }
   };
 
+  const handleMobileNumberChange = (number) => {
+    // Remove any non-digit characters
+    const cleanedNumber = number.replace(/\D/g, '');
+
+    // Only allow up to 10 digits
+    if (cleanedNumber.length <= 10) {
+      setMobileNumber(cleanedNumber); // Set mobile number only if length is <= 10
+      // setIsButtonEnabled(true);  // Enable the button when 10 digits are entered
+
+    }
+    // if (cleanedNumber.length === 10) {
+    //   setIsButtonEnabled(true);  // Enable the button when 10 digits are entered
+    //   // setMobileNumberError('');
+    //   // handleSubmit();  // Automatically call handleSubmit when 10 digits are entered
+    // }
+    // Display error if the length is less than 10 digits (optional, based on your needs)
+    if (cleanedNumber.length < 10) {
+      // setMobileNumberError('Mobile number must be 10 digits.');
+      <Text style={styles.errorText}>{mobileNumberError}</Text>
+
+    } else {
+      setMobileNumberError('');
+    }
+  };
+
 
 
   return (
     <View style={styles.container}>
+           
 <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
 
      <ScrollView contentContainerStyle={{ flexGrow: 1, marginHorizontal: 20,paddingTop:50 }}>
+      
         <View style={{ flex: 1 }}>
+          
           <View>
             <Text style={{ fontSize: hp(4), fontFamily: "Poppins-Medium" }}>
               Welcome back.
@@ -256,24 +274,36 @@ const Login = ({ navigation }) => {
             </Text>
           </View>
           <View>
-            {region === "IN" && (
+   
+          
               <>
                 <Text style={styles.label}>Mobile Number</Text>
-                <PhoneInput
-                  defaultCode="IN"
-                  layout="first"
-                  containerStyle={styles.phoneInputContainer}
-                  textContainerStyle={styles.phoneTextContainer}
-                  keyboardType="number-pad"
-                  value={mobileNumber}
-                  onChangeText={setMobileNumber}
-                />
+                <View style={styles.inputContainer}>
+        {/* Flag Icon */}
+        <Image
+          source={icons.flag} // Update with the actual path to your flag image
+          style={styles.flag}
+        />
+
+        {/* Country Code Label */}
+        <Text style={[styles.label,{marginLeft:12,marginRight:12,padding:5}]}>+91</Text>
+
+        {/* Phone Number Input */}
+        <TextInput
+          style={[styles.phoneTextContainer,{fontFamily:'Poppins',width:'100%',fontSize:14}]}
+          keyboardType="number-pad"
+          placeholder="Enter mobile number"
+          value={mobileNumber}
+          onChangeText={handleMobileNumberChange}
+          maxLength={10}
+        />
+      </View>
                 {mobileNumberError ? (
                   <Text style={{ color: "red" }}>{mobileNumberError}</Text>
                 ) : null}
               </>
-            )}
-            {region === "US" && (
+          
+           {/* <View style={{}}>
               <>
                 <Input
                   label="Email"
@@ -284,7 +314,9 @@ const Login = ({ navigation }) => {
                   containerStyle={styles.inputContainer}
                 />
               </>
-            )}
+
+              </View> */}
+           
             <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 5 }}>
               <Text style={{ fontFamily: "Poppins", fontWeight: "400", fontSize: 12 }}>
                 You will receive an SMS verification that may apply on the next step.
@@ -293,8 +325,7 @@ const Login = ({ navigation }) => {
           </View>
         </View>
         <View style={{marginBottom:12}}>
-          {region === "IN" && (
-           
+      
             <Button
             title={
               loading ? (
@@ -309,10 +340,11 @@ const Login = ({ navigation }) => {
             }
             onPress={handleSubmit}
             disabled={loading}
+            
           />
-          )}
-          {region === "US" && (
-             <Button
+
+        
+             {/* <Button
              title={
                loading ? (
                  <ActivityIndicator
@@ -326,17 +358,32 @@ const Login = ({ navigation }) => {
              }
              onPress={handleEmailSubmit}
              disabled={loading}
-           />
+           /> */}
          
-          )}
+         
+
+         
         </View>
       </ScrollView>
-      
+        {/* Loading Overlay */}
+        {isLoading && (
+        <View style={styles.overlay}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  flagOverlay: {
+    position: 'absolute',
+    width: 50, // Adjust width to cover the flag area
+    height: 50,
+    left: 0, // Position over the flag icon
+    top: 0,
+    backgroundColor: 'transparent',
+  },
   textContainer: {
     flexDirection: "column", // Ensures subtext is displayed below the main text
     marginLeft: 10,
@@ -352,6 +399,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  flag: {
+    marginLeft: 5,
+    height:23,
+    width:23,
+    resizeMode:'contain'
   },
   modalContent: {
     padding: 15,
@@ -385,10 +440,12 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 10,
-    borderColor: "gray",
-    width: wp(85),
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 8,
   },
   phoneInputContainer: {
     borderWidth: 1,
@@ -399,14 +456,23 @@ const styles = StyleSheet.create({
   phoneTextContainer: {
     borderTopRightRadius: 10,
     borderBottomRightRadius: 10,
-    paddingVertical: 0,
-    height: 45,
+    // paddingVertical: 0,
+    // height: 45,
+    fontSize:14
   },
   label: {
-    marginBottom: 10,
-    fontFamily: "Poppins",
+    // marginBottom: 10,
+    fontFamily: "Poppins-Medium",
     fontSize: 14,
-    color: COLORS.black,
+    marginTop:5,
+    marginBottom:5,
+    color: COLORS.primary,
+  },
+  errorText: {
+    fontSize: 10, // Set the font size
+    color: 'red', // Set the text color to red
+    fontFamily: 'Poppins', // Set the custom font if applicable
+    marginTop: 5,
   },
  
   buttonText: {

@@ -12,7 +12,7 @@ const   Header = ({ title, icon }) => {
                 <StatusBar style="dark" backgroundColor="#fff" />
 
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-                <Icon name={icon} size={25} color={'#573353'} />
+            <Image source={icon} style={styles.back} />
             </TouchableOpacity>
             <Text style={styles.title}>{title}</Text>
             
@@ -25,6 +25,10 @@ const   Header = ({ title, icon }) => {
 export default Header;
 
 const styles = StyleSheet.create({
+    back: {
+        width: 20,
+        height: 20,
+      },
     header: {
         width: '100%',
         flexDirection: 'row',
@@ -35,13 +39,13 @@ const styles = StyleSheet.create({
      paddingBottom: 20
     },
     backBtn: {
-        marginLeft:15
-    },
+        marginLeft:20,
+         },
     title: {
-        flex: 1, // Take up remaining space
+        // flex: 1, // Take up remaining space
         fontSize: 18,
-        marginRight:20,
-        marginLeft : 15,
-        fontFamily: 'Poppins-Medium',
+        // marginRight:20,
+        // marginLeft : 15,
+        fontFamily: 'Poppins-SemiBold',
     }
 });

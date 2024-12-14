@@ -12,7 +12,7 @@ import {
   BackHandler,
   Alert,ToastAndroid
 } from "react-native";
-import Toast from "react-native-toast-message";
+import ShimmerPlaceholder from "react-native-shimmer-placeholder";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useDispatch } from "react-redux";
 import Header from "../../../../components/header/Header";
@@ -23,13 +23,14 @@ import {
   getTutorById,
 } from "../../../../redux/actions/instructor/homeTutor/homeTutor";
 import { COLORS, icons, SIZES } from "../../../../components/constants";
-import { WINDOW_WIDTH } from "@gorhom/bottom-sheet";
+import { SCREEN_WIDTH, WINDOW_WIDTH } from "@gorhom/bottom-sheet";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
+import { windowWidth } from "../../../../utils/Dimensions";
 const ShowHomeTutor = ({ navigation, route }) => {
   const { id,status } = route.params;
   const dispatch = useDispatch();
@@ -38,15 +39,15 @@ const ShowHomeTutor = ({ navigation, route }) => {
   const [images, setImages] = useState([]);
   const [languages, setLanguages] = useState([]);
   const [specializations, setSpecializations] = useState([]);
+  const [prices, setPrices] = useState([]);
+
   const [yogaFor, setYogaFor] = useState([]);
   const [totalImages, setTotalImages] = useState(0); // Add this line
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      console.log("TutorId :" + id);
       const res = await dispatch(getTutorById(id));
-      console.log(res);
       const parsedLanguages = JSON.parse(res.data.language || "[]");
       setLanguages(Array.isArray(parsedLanguages) ? parsedLanguages : []);
       
@@ -77,11 +78,10 @@ const ShowHomeTutor = ({ navigation, route }) => {
   useEffect(() => {
     const handleBackPress = () => {
       if (navigation.isFocused()) {
-        // Check if the current screen is focused
-        navigation.goBack(); // Go back if the current screen is focused
-        return true; // Prevent default behavior (exiting the app)
+        navigation.goBack(); 
+        return true; 
       }
-      return false; // If not focused, allow default behavior (exit the app)
+      return false; 
     };
 
     BackHandler.addEventListener("hardwareBackPress", handleBackPress);
@@ -115,8 +115,14 @@ const ShowHomeTutor = ({ navigation, route }) => {
       text: "Add Photo",
       navigateTo: "AddTutorPhoto",
     },
+    {
+      id: 4,
+      color: "#ffe9d3",
+      image: require("../../../../assets/home/offer.png"),
+      text: "Add Price",
+      navigateTo: "AddTutorPrice",
+    },
   ];
-  // const filteredGridData = gridData;
     
   const banner = [
     { id: 1, image: require("../../../../assets/get-screen/tutor1.jpg") },
@@ -140,7 +146,7 @@ const ShowHomeTutor = ({ navigation, route }) => {
   );
 
   const renderApiImageItem = ({ item }) => (
-    <View style={styles.carouselItem}>
+    <View style={styles.carouselItem} key={item.id}>
       <Image source={{ uri: item.path }} style={styles.carouselImage} />
       {totalImages > 1 && ( 
       <TouchableOpacity
@@ -161,6 +167,7 @@ const ShowHomeTutor = ({ navigation, route }) => {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.itemContainer}
+      key={item.id}
       onPress={() => navigation.navigate(item.navigateTo, { id: id })}
     >
       <View style={[styles.circle, { backgroundColor: item.color }]}>
@@ -171,7 +178,7 @@ const ShowHomeTutor = ({ navigation, route }) => {
   );
 
   const renderTimeSlot = ({ item }) => (
-    <View style={styles.timeSlotContainer}>
+    <View style={styles.timeSlotContainer} key={item.id}>
       <Text style={styles.timeSlotText}>{item.time}</Text>
       <TouchableOpacity
         onPress={() => showSlotAlert(item.id)}
@@ -244,16 +251,13 @@ const ShowHomeTutor = ({ navigation, route }) => {
 
   const handleDelete = async (id) => {
     try {
-      console.log("ImageID :" + id);
       const res = await dispatch(deleteTutorLocation(id));
-      console.log(res.success);
       if (res.success) {
         ToastAndroid.show(res.message, ToastAndroid.SHORT);
         fetchData();
       }
     } catch (error) {
-      console.error("Error deleting item:", error);
-      const msg = error.res.data.message;
+      const msg = error.res?.data?.message;
       ToastAndroid.show(msg, ToastAndroid.SHORT);
 
     }
@@ -263,11 +267,10 @@ const ShowHomeTutor = ({ navigation, route }) => {
   const handleSlotDelete = async (id) => {
     try {
       const res = await dispatch(deleteTutorSlot(id));
-      console.log("ID: " + id);
-      console.log("res:", res);
+    
   
       if (res && res.success) {
-        ToastAndroid.show(res.message, ToastAndroid.SHORT);
+        ToastAndroid.show(res?.message, ToastAndroid.SHORT);
 
         fetchData();
       } else {
@@ -297,8 +300,7 @@ const ShowHomeTutor = ({ navigation, route }) => {
     // console.log(id);
     try {
       const res = await dispatch(deleteTutorImage(id));
-      console.log(id)
-      console.log(res);
+    
       if (res.success) {
         ToastAndroid.show(res.message, ToastAndroid.SHORT);
 
@@ -311,13 +313,9 @@ const ShowHomeTutor = ({ navigation, route }) => {
 
     }
   };
-  return (
+  return (  
     <>
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-        </View>
-      ) : (
+    
         <GestureHandlerRootView style={{ flex: 1 }}>
           <View style={styles.container}>
           <StatusBar backgroundColor={COLORS.primary} style="light" />
@@ -327,8 +325,21 @@ const ShowHomeTutor = ({ navigation, route }) => {
                 icon={icons.back}
               />
             </View>
+            {loading ? (
+         <ScrollView style={styles.shimmerWrapper}>
+         <ShimmerPlaceholder style={styles.headerShimmer} />
+         <ShimmerPlaceholder style={styles.imageShimmer} />
+         <ShimmerPlaceholder style={styles.textShimmer} />
+         <ShimmerPlaceholder style={styles.shimmerContainer} />
+         <ShimmerPlaceholder style={styles.shimmerContainer} />
+         <ShimmerPlaceholder style={styles.shimmerContainer} />
+         <ShimmerPlaceholder style={styles.shimmerContainer} />
+
+       </ScrollView>
+       
+      ) : (
             <ScrollView>
-              <View style={{ paddingVertical: 0 }}>
+              <View>
                 <View style={{ paddingHorizontal: 20, paddingVertical: 0 }}>
                   <Text style={{ fontFamily: "Poppins-SemiBold", fontSize: 16 }}>
                    {data && data.homeTutorName}
@@ -347,12 +358,12 @@ const ShowHomeTutor = ({ navigation, route }) => {
                   />
                 </View>
                 <View>
-                  <View style={{ paddingVertical: 10}}>
+                  <View>
                     <FlatList
                       data={gridData}
                       renderItem={renderItem}
                       keyExtractor={(item) => item.id.toString()}
-                      numColumns={3}
+                      numColumns={4}
                       contentContainerStyle={styles.contentContainer}
                     />
                   </View>
@@ -377,7 +388,7 @@ const ShowHomeTutor = ({ navigation, route }) => {
                       />
                     </TouchableOpacity>
                   </View>
-                  {/* </View> */}
+
                   <View
   style={{
     backgroundColor: COLORS.white,
@@ -389,8 +400,8 @@ const ShowHomeTutor = ({ navigation, route }) => {
   }}
 >
 <View>
-  <Text style={styles.headingText}>Service Areas (Locations)</Text>
-  <View style={{ paddingVertical: 10 }}>
+  <Text style={[styles.headingText,{marginBottom:10}]}>Service Areas (Locations)</Text>
+  <View>
     {data.serviceAreas &&
       data.serviceAreas.map((area, index) => (
         <View
@@ -404,7 +415,7 @@ const ShowHomeTutor = ({ navigation, route }) => {
           }}
         >
           <View style={{ flexDirection: "row"}}>
-            <Ionicons name="location-outline" size={18} color="black" style={{ marginRight: 5 }} />
+            <Ionicons name="location-outline" size={16} color="black" style={{ marginRight:5,marginTop:3 }} />
             <Text style={[styles.text, { flexWrap: 'wrap', width: 270 }]}>{area.locationName}</Text>
           </View>
           
@@ -441,12 +452,12 @@ const ShowHomeTutor = ({ navigation, route }) => {
                   >
                     <View>
                       <Text style={styles.headingText}>Languages</Text>
-                      <View style={{ paddingVertical: 0 }}>
+                      <View>
                       
                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                           
                           {languages.map((lang, index) => (
-                              <View style={styles.timeSlotContainer}>
+                              <View style={styles.timeSlotContainer}  key={lang.id}>
                             <Text key={index} style={styles.specilizationText}>
                               {lang}
                             </Text>
@@ -472,36 +483,41 @@ const ShowHomeTutor = ({ navigation, route }) => {
                   >
                     <View>
                       <Text style={styles.headingText}>Specialisation</Text>
-                      <View style={{ paddingVertical: 10 }}>
+                      <View>
                       
                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {specializations.map((spec, index) => (
-                       <View style={styles.timeSlotContainer}>
+                       <View style={styles.timeSlotContainer}  key={spec.id}>
                       <Text key={index} style={styles.specilizationText}>
                         {spec}
                       </Text>
                         </View>
                     ))}
                   </ScrollView>
-                      </View>
-                    </View>
-                    <TouchableOpacity
+                  </View>
+                  </View>
+                   <TouchableOpacity
                       onPress={() =>
                         navigation.navigate("UpdateHomeTutor", { id: id })
                       }
+                      style={{marginLeft:-20}}
                     >
                       <Image
                         source={require("../../../../assets/icons/edit.png")}
                         style={styles.editImg}
                       />
                     </TouchableOpacity>
+                      
+                   
                   </View>
+
+
                   <View
                     style={styles.innerView}
                   >
                     <View>
                       <Text style={styles.headingText}>Session Offered</Text>
-                      <View style={{ paddingVertical: 10 }}>
+                      <View>
                         <View style={styles.timeSlotContainer}>
                           <Text style={styles.timeSlotText}>
                             {(data.isGroupSO ? "Group" : "") +
@@ -511,33 +527,11 @@ const ShowHomeTutor = ({ navigation, route }) => {
                               (data.isPrivateSO ? "Individual" : "")}
                           </Text>
                         </View>
-                        {data && data.privateSessionPrice_Day && (
-                          <Text style={{ fontSize: 12, fontFamily: "Poppins" }}>
-                            {" "}
-                            * Individual Class (Day) - ₹{" "}
-                            {data.privateSessionPrice_Day}
-                          </Text>
-                        )}
-                        {data && data.privateSessionPrice_Month && (
-                          <Text style={{ fontSize: 12, fontFamily: "Poppins" }}>
-                            {" "}
-                            * Individual Class (Month) - ₹{" "}
-                            {data.privateSessionPrice_Month}
-                          </Text>
-                        )}
-                        {data && data.groupSessionPrice_Day && (
-                          <Text style={{ fontSize: 12, fontFamily: "Poppins" }}>
-                            {" "}
-                            * Group Class (Day) - ₹ {data.groupSessionPrice_Day}
-                          </Text>
-                        )}
-                        {data && data.groupSessionPrice_Month && (
-                          <Text style={{ fontSize: 12, fontFamily: "Poppins" }}>
-                            {" "}
-                            * Group Class (Month) - ₹{" "}
-                            {data.groupSessionPrice_Month}
-                          </Text>
-                        )}
+                        
+                        
+                   
+                       
+                        
                       </View>
                     </View>
                     <TouchableOpacity
@@ -551,6 +545,7 @@ const ShowHomeTutor = ({ navigation, route }) => {
                       />
                     </TouchableOpacity>
                   </View>
+
                   {data.timeSlotes?.length > 0 && (
                     <View
                       style={{
@@ -580,6 +575,69 @@ const ShowHomeTutor = ({ navigation, route }) => {
                       </View>
                     </View>
                   )}
+<View style={styles.innerView}>
+{data.hTPrices && data.hTPrices.length > 0 && (
+  <View>
+    <Text style={[styles.headingText, { marginBottom: 10 }]}>Prices</Text>
+    <View>
+      {data.hTPrices.map((price) => (
+        <View
+          key={price.id}
+          style={{
+            marginBottom: 15,
+            padding: 10,
+            borderWidth: 1,
+            width:windowWidth/1.2,
+            borderColor: "#ddd",
+            borderRadius: 5,
+            backgroundColor: "#f9f9f9",
+          }}
+        >
+          {/* Price Name */}
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+            <Text style={styles.timeSlotText}>{price.priceName}</Text>
+          </View>
+
+          {/* Private Price (Conditional) */}
+          {price.private_PricePerDayPerRerson !== null && (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+              <Text style={styles.timeSlotText}>Private Price Per Person :  ₹{price.private_PricePerDayPerRerson}</Text>
+            </View>
+          )}
+
+        {price.private_totalPricePerPerson !== null && (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+              <Text style={styles.timeSlotText}>Total Private Price :  ₹{price.private_totalPricePerPerson}</Text>
+            </View>
+          )}
+
+          {/* Group Price (Conditional) */}
+          {price.group_PricePerDayPerRerson !== null && (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+              <Text style={styles.timeSlotText}>Group Price Per Person  :  ₹{price.group_PricePerDayPerRerson}</Text>
+            </View>
+          )}
+
+       {price.group_totalPricePerPerson !== null && (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+              <Text style={styles.timeSlotText}>Total Group Price  :  ₹{price.group_totalPricePerPerson}</Text>
+            </View>
+          )}
+
+          {/* Duration Type */}
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={styles.timeSlotText}>Duration Type:</Text>
+            <Text style={styles.timeSlotText}>{price.durationType}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  </View>
+)}
+
+</View>
+
+
 
                   <View
                     style={styles.innerView}
@@ -592,7 +650,7 @@ const ShowHomeTutor = ({ navigation, route }) => {
                      
                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {yogaFor.map((item, index) => (
-                       <View style={styles.timeSlotContainer}>
+                       <View style={styles.timeSlotContainer}  key={item.id}>
                       <Text key={index} style={styles.timeSlotText}>
                         {item}
                       </Text>
@@ -612,17 +670,41 @@ const ShowHomeTutor = ({ navigation, route }) => {
                       />
                     </TouchableOpacity>
                   </View>
+                  
                 </View>
               </View>
             </ScrollView>
+            )}
           </View>
         </GestureHandlerRootView>
-      )}
+      
     </>
   );
 };
 
 const styles = StyleSheet.create({
+  shimmerWrapper: {
+    paddingHorizontal: 20,
+  },
+  headerShimmer: {
+    height: 30,
+    width: "100%",
+    marginBottom: 20,
+    borderRadius: 5,
+  },
+  textShimmer: {
+    height: 20,
+    width: "100%",
+    height:65,
+    marginBottom: 15,
+    borderRadius: 8,
+  },
+  imageShimmer: {
+    height: 120,
+    width: "100%",
+    marginBottom: 20,
+    borderRadius: 10,
+  },
   innerView :{
     flexDirection: "row",
     justifyContent: "space-between",
@@ -644,6 +726,13 @@ const styles = StyleSheet.create({
   },
   bannerContentContainer: {
     paddingHorizontal: 10,
+  },
+ shimmerContainer: {
+  height: 20,
+  width: "100%",
+  height:80,
+  marginBottom: 20,
+  borderRadius: 8,
   },
 
 cameraImage: {
@@ -689,11 +778,12 @@ cameraText: {
   contentContainer: {
     // alignItems: "spa",
     alignItems:'center',
+    marginHorizontal:20
  
   },
   itemContainer: {
     alignItems: "center",
-    margin: 10,
+    margin: 0,
   },
   circle: {
     width: 50,
@@ -710,7 +800,7 @@ cameraText: {
   imgText: {
     fontFamily: "Poppins",
     fontSize: 10,
-    width: 90,
+    width: 80,
     textAlign: "center",
   },
   horizontalContainer: {
@@ -752,7 +842,7 @@ cameraText: {
   headingText: {
     fontFamily: "Poppins-SemiBold",
     fontSize: 14,
-    marginVertical:10
+    marginVertical:0
   },
   text: {
     fontFamily: "Poppins",
@@ -776,7 +866,7 @@ cameraText: {
     // backgroundColor: "rgba(0, 0, 0, 1)",
     alignItems: "center",
     paddingHorizontal: 5,
-    paddingVertical: 10,
+    paddingVertical: 15,
     position: "relative",
   },
   timeSlotText: {

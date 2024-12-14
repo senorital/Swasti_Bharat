@@ -27,5 +27,5 @@ export const rootReducer = combineReducers({
   experience,
   homeTutor,
   referralData : redeemReducer,
-  addressReducer
+  addresses : addressReducer
 });

@@ -21,16 +21,16 @@ import Input from "../../../../components/input/Input";
 import Button from "../../../../components/button/Button";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  getTutorQualification,
   getTutorById,
-  updateHomeTutor
+  updateHomeTutor,
+  getYogaForCategory
 } from "../../../../redux/actions/instructor/homeTutor/homeTutor";
 import { useDispatch } from "react-redux";
 import { COLORS, icons } from "../../../../components/constants";
 
 const data = [
-  { type: 'certification' },
-  { type: 'bio' },
+  // { type: 'certification' },
+  // { type: 'bio' },
   { type: 'specialisations' },
   { type: 'service' },
   { type: 'price' },
@@ -52,19 +52,38 @@ const specialisationItems = [
 ];
 
 const language = [
-  { id: "1", name: "Hindi" },
-  { id: "2", name: "English" },
+  { id: '1', name: 'English' },
+  { id: '2', name: 'Spanish' },
+  { id: '3', name: 'French' },
+  { id: '4', name: 'German' },
+  { id: '5', name: 'Hindi' },
+  { id: '6', name: 'Bengali' },
+  { id: '7', name: 'Telugu' },
+  { id: '8', name: 'Marathi' },
+  { id: '9', name: 'Tamil' },
+  { id: '10', name: 'Urdu' },
+  { id: '11', name: 'Gujarati' },
+  { id: '12', name: 'Malayalam' },
+  { id: '13', name: 'Kannada' },
+  { id: '14', name: 'Odia' },
+  { id: '15', name: 'Punjabi' },
+  { id: '16', name: 'Assamese' },
+  { id: '17', name: 'Maithili' },
+  { id: '18', name: 'Sanskrit' },
+  { id: '19', name: 'Konkani' },
+  { id: '20', name: 'Nepali' },
+  { id: '21', name: 'Manipuri' },
+  { id: '22', name: 'Sindhi' },
+  { id: '23', name: 'Dogri' },
+  { id: '24', name: 'Kashmiri' },
+  { id: '25', name: 'Bodo' },
 ];
 
-const yogaItems = [
-  { id: "1", name: "Yoga For Parents" },
-  { id: "2", name: "Yoga For Children" },
-  { id: "3", name: "Yoga For Pregnant Woman" },
-];
 
 const UpdateHomeTutor = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { id } = route.params;
+  const [yogaItems, setYogaItems] = useState([]);
 
   const [selectedSpecialisations, setSelectedSpecialisations] = useState([]);
   const [selectedServices, setSelectedServices] = useState([]);
@@ -86,23 +105,25 @@ const UpdateHomeTutor = ({ navigation, route }) => {
   const safeSelectedItems = Array.isArray(selectedItems) ? selectedItems : [];
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+ 
+
   useEffect(() => {
-    const fetchData = async () => {
+    const YogaForCategory = async () => {
       try {
-        setLoading(true);
-        const qualificationRes = await dispatch(getTutorQualification("HomeTutor"));
-        setCertification(qualificationRes.data[0].documentOriginalName);
+        const response = await dispatch(getYogaForCategory());
+        
+        if (response.success) {
+          setYogaItems(response.data); 
+        } else {
+          console.error("Failed to fetch yoga categories:", response.message);
+        }
       } catch (error) {
-        console.error("Error fetching data:", error);
-        const msg = error.response?.data?.message || "An error occurred. Please try again.";
-        Toast.show({ type: "error", text1: msg, visibilityTime: 2000, autoHide: true });
-      } finally {
-        setLoading(false);
+        console.error("Failed to fetch yoga categories:", error);
       }
     };
 
-    fetchData();
-  }, [dispatch]);
+    YogaForCategory();
+  }, [dispatch]); // Added dispatch to dependencies
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -125,52 +146,38 @@ const UpdateHomeTutor = ({ navigation, route }) => {
       try {
         setLoading1(true);
         const res = await dispatch(getTutorById(id));
+
         setTutorName(res.data.homeTutorName);
         setBio(res.data.instructorBio);
 
       const parsedLanguages = JSON.parse(res.data.language || "[]");
-      console.log("Parsed Languages:", parsedLanguages);
       const languageIds = parsedLanguages.map(lang => language.find(item => item.name === lang)?.id);
-      console.log("Mapped Language IDs:", languageIds);
       setSelectedLanguage(languageIds.filter(Boolean) || []);
 
       // Parse and set specialisation data
       const parsedSpecialisations = JSON.parse(res.data.specilization || "[]");
-      console.log("Parsed Specialisations:", parsedSpecialisations);
       const specialisationIds = parsedSpecialisations.map(spec => specialisationItems.find(item => item.name === spec)?.id);
-      console.log("Mapped Specialisation IDs:", specialisationIds);
       setSelectedSpecialisations(specialisationIds.filter(Boolean) || []);
 
       // Parse and set yogaFor data
       const parsedYogaFor = JSON.parse(res.data.yogaFor || "[]");
-      console.log("Parsed Yoga For:", parsedYogaFor);
-      const yogaForIds = parsedYogaFor.map(yoga => yogaItems.find(item => item.name === yoga)?.id);
-      console.log("Mapped Yoga For IDs:", yogaForIds);
+      const yogaForIds = parsedYogaFor.map(yoga => yogaItems.find(item => item.yogaFor === yoga)?.id);
       setSelectedYogaFor(yogaForIds.filter(Boolean) || []);
-    
+
       setIsGroupSO(res.data.isGroupSO);
+    
+
       setIsPrivateSO(res.data.isPrivateSO);
-      console.log(res.data.privateSessionPrice_Day.toString());
-      setPrivateSessionPerDay(res.data.privateSessionPrice_Day ||'');
-      setPrivateSessionPerMonth(res.data.privateSessionPrice_Month || '');
-      setGroupClassPerDay(res.data.groupSessionPrice_Day || '');
-      setGroupClassPerMonth(res.data.groupSessionPrice_Month || '');
-  
-      // setGroupClassPerDay(res.data.groupClassPerDay)
-      // setPrivateSessionPerDay
+     
        } finally {
         setLoading1(false);
       }
     };
 
     fetchData();
-  }, [dispatch, id]);
+  }, [dispatch, id,yogaItems]);
 
-  const serviceItems = [
-    { id: "1", name: "Group Class" },
-    { id: "2", name: "Individual Class" },
-  ];
-  
+
 
   const specialisationIdToName = specialisationItems.reduce((acc, item) => {
     acc[item.id] = item.name;
@@ -183,7 +190,7 @@ const UpdateHomeTutor = ({ navigation, route }) => {
   }, {});
 
   const yogaForIdToName = yogaItems.reduce((acc, item) => {
-    acc[item.id] = item.name;
+    acc[item.id] = item.yogaFor;
     return acc;
   }, {});
 
@@ -214,36 +221,98 @@ const UpdateHomeTutor = ({ navigation, route }) => {
           return [];
       }};
       const items = getItems();
-      if (!items) return null; // Return null or a fallback UI if items is undefined
+      if (!items) return null; 
 
     switch (item.type) {
-      case 'certification':
+    
+      case 'yogaFor':
         return (
-          <Input
-            label="Certification / Qualification"
-            value={values.certification}
-            onChangeText={handleChange("certification")}
-            onBlur={handleBlur("certification")}
-            placeholder="Enter your certification"
-            error={touched.certification && errors.certification}
-            isRequired={true}
+          <>
+          <Text style={styles.label}>Giving Yoga Sessions For<Text style={{ color: "red" }}>*</Text></Text>
+          <MultiSelect
+            hideTags
+            items={yogaItems}
+            uniqueKey="id"
+            onSelectedItemsChange={(newSelectedItems) => {
+              setSelectedYogaFor(newSelectedItems);
+              setFieldValue('yogaFor', newSelectedItems);
+            }}
+            selectedItems={selectedYogaFor}
+            selectText="Select Yoga For"
+            searchInputPlaceholderText="Search Items..."
+            altFontFamily="Poppins"
+            tagRemoveIconColor="#CCC"
+            tagBorderColor="#CCC"
+            tagTextColor="#CCC"
+            selectedItemTextColor="#CCC"
+            selectedItemIconColor="#CCC"
+            itemTextColor="#000"
+            displayKey="name"
+            searchInputStyle={{ color: '#000', fontFamily: 'Poppins', paddingHorizontal: 0 }}
+            submitButtonColor="#000"
+            submitButtonText=""
+            hideSubmitButton={true}
+            styleInputGroup={styles.styleInputGroup}
+            styleDropdownMenuSubsection={styles.styleDropdownMenuSubsection}
+            styleDropdownMenu={styles.styleDropdownMenu}
+            styleMainWrapper={styles.styleMainWrapper}
+            flatListProps={{
+              renderItem: ({ item }) => {
+                const isSelected = selectedYogaFor.includes(item.id);
+                return (
+                  <TouchableOpacity
+                    style={[
+                      { padding: 10, margin: 2, borderRadius: 10 },
+                      { backgroundColor: isSelected ? '#EEEEEE' : '#fff' }
+                    ]}
+                    onPress={() => {
+                      const newSelectedItems = isSelected
+                        ? selectedYogaFor.filter(id => id !== item.id)
+                        : [...selectedYogaFor, item.id];
+                      setSelectedYogaFor(newSelectedItems);
+                      setFieldValue('yogaFor', newSelectedItems);
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={[
+                        styles.itemText,
+                        { color: isSelected ? COLORS.primary : '#000', fontFamily: 'Poppins' }
+                      ]}>
+                        {item.yogaFor}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={20} color="#000" />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+            }}
           />
-        );
-      case 'bio':
-        return (
-          <Input
-            onChangeText={handleChange("bio")}
-            onBlur={handleBlur("bio")}
-            value={values.bio}
-            multiline={true}
-            numberOfLines={4}
-            isRequired={true}
-            label="Instructor Bio"
-            placeholder="Instructor Bio"
-            error={touched.bio && errors.bio}
-            style={{ textAlignVertical: "top", paddingHorizontal:0,paddingVertical:10 }}
-          />
-        );
+          <View style={styles.tabsContainer}>
+            {selectedYogaFor.map(itemId => {
+              const item = yogaItems.find(i => i.id === itemId);
+              if (!item) return null;
+              return (
+                <View key={item.id} style={styles.tab}>
+                  <Text style={styles.tabText}>{item.yogaFor}</Text>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => {
+                      const updatedItems = selectedYogaFor.filter(id => id !== itemId);
+                      setSelectedYogaFor(updatedItems);
+                      setFieldValue('yogaFor', updatedItems);
+                    }}
+                  >
+                    <Text style={styles.removeButtonText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        </>
+        )
+    
       case 'specialisations':
         const removeItem = (itemId) => {
           const updatedItems = safeSelectedItems.filter(id => id !== itemId);
@@ -377,55 +446,6 @@ const UpdateHomeTutor = ({ navigation, route }) => {
               </View>
             </View>
 
-            {values.isPrivateSO && (
-  <>
-    <View style={{ marginTop: 10 }}>
-      <Input
-        label="Price per Individual Class"
-        value={values.pricePerIndividualClass}
-        onChangeText={handleChange("pricePerIndividualClass")}
-       onBlur={handleBlur("pricePerIndividualClass")}
-        placeholder="Enter price"
-        keyboardType="numeric"
-        error={touched.pricePerIndividualClass && errors.pricePerIndividualClass}
-      />
-    </View>
-    <Input
-      label="Price per Monthly Individual Class"
-      value={values.pricePerMonthlyIndividualClass}
-       onChangeText={handleChange("pricePerMonthlyIndividualClass")}
-       onBlur={handleBlur("pricePerMonthlyIndividualClass")}
-           placeholder="Enter price"
-      keyboardType="numeric"
-      error={touched.pricePerMonthlyIndividualClass && errors.pricePerMonthlyIndividualClass}
-    />
-  </>
-)}
-
-{values.isGroupSO && (
-  <>
-    <Input
-      label="Price per Group Class"
-      value={values.pricePerGroupClass}
-      onChangeText={handleChange("pricePerGroupClass")}
-      onBlur={handleBlur("pricePerGroupClass")}
-     placeholder="Enter price"
-      keyboardType="numeric"
-      error={touched.pricePerGroupClass && errors.pricePerGroupClass}
-    />
-    <Input
-      label="Price per Monthly Group Class"
-      value={values.pricePerMonthlyGroupClass}
-      onChangeText={handleChange("pricePerMonthlyGroupClass")}
-      onBlur={handleBlur("pricePerMonthlyGroupClass")}
-       placeholder="Enter price"
-      keyboardType="numeric"
-      error={touched.pricePerMonthlyGroupClass && errors.pricePerMonthlyGroupClass}
-    />
-  </>
-)}
-
-     
           </>
         );
  
@@ -518,170 +538,40 @@ const UpdateHomeTutor = ({ navigation, route }) => {
           </View>
         </>
           );
-      case 'yogaFor':
-        return (
-          <>
-          <Text style={styles.label}>Yoga for<Text style={{ color: "red" }}>*</Text></Text>
-          <MultiSelect
-            hideTags
-            items={yogaItems}
-            uniqueKey="id"
-            onSelectedItemsChange={(newSelectedItems) => {
-              console.log("Yoga For selected:", newSelectedItems);
-              setSelectedYogaFor(newSelectedItems);
-              setFieldValue('yogaFor', newSelectedItems);
-            }}
-            selectedItems={selectedYogaFor}
-            selectText="Select Yoga For"
-            searchInputPlaceholderText="Search Items..."
-            altFontFamily="Poppins"
-            tagRemoveIconColor="#CCC"
-            tagBorderColor="#CCC"
-            tagTextColor="#CCC"
-            selectedItemTextColor="#CCC"
-            selectedItemIconColor="#CCC"
-            itemTextColor="#000"
-            displayKey="name"
-            searchInputStyle={{ color: '#000', fontFamily: 'Poppins', paddingHorizontal: 0 }}
-            submitButtonColor="#000"
-            submitButtonText=""
-            hideSubmitButton={true}
-            styleInputGroup={styles.styleInputGroup}
-            styleDropdownMenuSubsection={styles.styleDropdownMenuSubsection}
-            styleDropdownMenu={styles.styleDropdownMenu}
-            styleMainWrapper={styles.styleMainWrapper}
-            flatListProps={{
-              renderItem: ({ item }) => {
-                const isSelected = selectedYogaFor.includes(item.id);
-                return (
-                  <TouchableOpacity
-                    style={[
-                      { padding: 10, margin: 2, borderRadius: 10 },
-                      { backgroundColor: isSelected ? '#EEEEEE' : '#fff' }
-                    ]}
-                    onPress={() => {
-                      const newSelectedItems = isSelected
-                        ? selectedYogaFor.filter(id => id !== item.id)
-                        : [...selectedYogaFor, item.id];
-                      console.log("Updated Yoga For selected:", newSelectedItems);
-                      setSelectedYogaFor(newSelectedItems);
-                      setFieldValue('yogaFor', newSelectedItems);
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={[
-                        styles.itemText,
-                        { color: isSelected ? COLORS.primary : '#000', fontFamily: 'Poppins' }
-                      ]}>
-                        {item.name}
-                      </Text>
-                      {isSelected && (
-                        <Ionicons name="checkmark" size={20} color="#000" />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              }
-            }}
-          />
-          <View style={styles.tabsContainer}>
-            {selectedYogaFor.map(itemId => {
-              const item = yogaItems.find(i => i.id === itemId);
-              console.log("Tab item:", item); 
-              if (!item) return null;
-              return (
-                <View key={item.id} style={styles.tab}>
-                  <Text style={styles.tabText}>{item.name}</Text>
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => {
-                      const updatedItems = selectedYogaFor.filter(id => id !== itemId);
-                      console.log("Removed Yoga For selected:", updatedItems);
-                      setSelectedYogaFor(updatedItems);
-                      setFieldValue('yogaFor', updatedItems);
-                    }}
-                  >
-                    <Text style={styles.removeButtonText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </View>
-        </>
+    
         
-        );
+        
       default:
         return null;
     }
   };
 
   const handleSubmit = async (values, { setSubmitting }) => {
-    const specialisations = values.specialisations.map(id => specialisationIdToName[id]);
+    const specialisationsd = values.specialisations.map(id => specialisationIdToName[id]);
     const languages = values.language.map(id => languageIdToName[id]);
-    const yogaFor = values.yogaFor.map(id => yogaForIdToName[id]);
+    const yogaFors = values.yogaFor.map(id => yogaForIdToName[id]);
 
     const tutorData = {
       instructorBio: values.bio,
       language: languages,
       isGroupSO: values.isGroupSO,
       isPrivateSO: values.isPrivateSO,
-      specilization: specialisations,
-      yogaFor: yogaFor,
+      specilization: specialisationsd,
+      yogaFor: yogaFors,
       homeTutorName: values.tutorName,
     id
     };
 
-    if (
-      values.pricePerIndividualClass !== undefined &&
-      values.pricePerIndividualClass !== ""
-    ) {
-      tutorData.privateSessionPrice_Day =
-        values.pricePerIndividualClass;
-    }
-
-    if (
-      values.pricePerMonthlyIndividualClass !== undefined &&
-      values.pricePerMonthlyIndividualClass !== ""
-    ) {
-      tutorData.privateSessionPrice_Month =
-        values.pricePerMonthlyIndividualClass;
-    }
-
-    if (
-      values.pricePerGroupClass !== undefined &&
-      values.pricePerGroupClass !== ""
-    ) {
-      tutorData.groupSessionPrice_Day = values.pricePerGroupClass;
-    }
-
-    if (
-      values.pricePerMonthlyGroupClass !== undefined &&
-      values.pricePerMonthlyGroupClass !== ""
-    ) {
-      tutorData.groupSessionPrice_Month =
-        values.pricePerMonthlyGroupClass;
-    }
-
-    console.log("tutorData :" + tutorData);
+   
     try {
       const res = await dispatch(updateHomeTutor(tutorData));
-      // Toast.show({
-      //   type: "success",
-      //   text1: res.message,
-      //   visibilityTime: 2000,
-      //   autoHide: true,
-      // });
+     
       ToastAndroid.show(res.message,ToastAndroid.SHORT)
 
       navigation.goBack();
     } catch (error) {
       console.error("Error updating home tutor:", error);
-      // Toast.show({
-      //   type: "error",
-      //   text1: "An error occurred. Please try again.",
-      //   visibilityTime: 2000,
-      //   autoHide: true,
-      // });
+   
       ToastAndroid.show("An error occurred. Please try again.",ToastAndroid.SHORT)
 
     } finally {
@@ -711,19 +601,13 @@ const UpdateHomeTutor = ({ navigation, route }) => {
           <Formik
             initialValues={{
               bio: bio,
+              yogaFor: selectedYogaFor || [],
               specialisations: selectedSpecialisations || [],
               isPrivateSO: isPrivateSO,
               isGroupSO: isGroupSO,
               language: selectedLanguage || [],
-              yogaFor: selectedYogaFor,
-              certification: certification,
-              pricePerIndividualClass: String(privateSessionPerDay),
-              pricePerMonthlyIndividualClass: String(privateSessionPerMonth),
-              pricePerGroupClass: String(groupClassPerDay),
-              pricePerMonthlyGroupClass: String(groupClassPerMonth),
               tutorName: tutorName,
             }}
-            // validationSchema={stepOneValidationSchema}
             onSubmit={handleSubmit}
           >
            {({ handleChange, handleBlur, handleSubmit, values, touched, errors, setFieldValue, isSubmitting }) => (
@@ -733,8 +617,9 @@ const UpdateHomeTutor = ({ navigation, route }) => {
                 return renderItem({ item, handleChange, handleBlur, values, touched, errors, setFieldValue });
               }}
               keyExtractor={(item) => item.type}
-              contentContainerStyle={styles.stepContainer}
+              contentContainerStyle={[styles.stepContainer,{paddingBottom:70}]}
               ListFooterComponent={
+                <View style={{ paddingVertical: 0 }}>
                 <Button
                   title={
                     isSubmitting ? (
@@ -751,6 +636,7 @@ const UpdateHomeTutor = ({ navigation, route }) => {
                   disabled={isSubmitting}
               
                 />
+                </View>
               }
             />
           )}
@@ -822,7 +708,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontFamily: "Poppins_Medium",
+    fontFamily: "Poppins-Medium",
     fontWeight: '600',
     color:COLORS.primary,
     marginBottom:5

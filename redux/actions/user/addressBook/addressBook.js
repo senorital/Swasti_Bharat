@@ -41,7 +41,8 @@ export const addAddress = (formData) => async (dispatch) => {
   export const deleteAddress = (id) => async (dispatch) => {
     try {
       const response = await api.deleteAddress(id);
-      dispatch({ type: DELETE_ADDRESS, payload: id });
+      console.log("Delete aDdress :" + response)
+      dispatch({ type: DELETE_ADDRESS, payload: response.data });
       return response.data;
     } catch (error) {
       console.error(error);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity,TouchableHighlight } from 'react-native';
 import { ProgressBar } from 'react-native-paper';
 import { COLORS } from '../../../../components/constants';
 import { useNavigation } from '@react-navigation/native';
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontFamily: 'Poppins_Medium',
+    fontFamily: 'Poppins-Medium',
     color: COLORS.black,
   },
   progressContainer: {

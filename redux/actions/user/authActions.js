@@ -4,6 +4,7 @@ import {
   ADD_PROFILE_PIC,
   DELETE_PROFILE_PIC,
   GET_IMAGES,
+  GET_MORNING_EVENING_TIMESLOT,
   GET_YOGA_FOR_CATEGORY,
   UPDATE_USER,
 
@@ -16,7 +17,6 @@ export const getBanners = () => async (dispatch) => {
   try {
 
     const { data } = await api.getBanners();
-    // console.log(data);
     dispatch({ type: GET_IMAGES, payload: data });
     return data;
   } catch (error) {
@@ -40,7 +40,6 @@ export const updateUser = (formData) => async (dispatch) => {
 export const useraddProfilePic = (formData) => async (dispatch) => {
   try {
     const response = await api.useraddProfilePic(formData);
-    // console.log("Response from API:", response); // Debug log for API response
     dispatch({ type: ADD_PROFILE_PIC, payload: response });
     return response;
   } catch (error) {
@@ -63,7 +62,6 @@ export const getYogaForCategory = () => async (dispatch) => {
   try {
 
     const { data } = await api.getYogaForCategory();
-    console.log("in actions... " + data);
     dispatch({ type: GET_YOGA_FOR_CATEGORY, payload: data });
     return data;
   } catch (error) {
@@ -72,3 +70,13 @@ export const getYogaForCategory = () => async (dispatch) => {
   }
 };
 
+export const getMorningEveningTimeSlot = (formData) => async (dispatch) => {
+  try {
+
+    const { data } = await api.getMorningEveningTimeSlot(formData);
+    dispatch({ type: GET_MORNING_EVENING_TIMESLOT, payload: data });
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};

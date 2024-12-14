@@ -35,9 +35,7 @@ const { id } = route.params;
   const totalSteps = 1;
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
-  // const addresses = useSelector((state) => state.address.addresses);
 
-  console.log("User NAme123 :" + user.name)
   const [inputs, setInputs] = useState({
     name: "",
     email: "",
@@ -102,19 +100,12 @@ const { id } = route.params;
 
 
 
-
-
-
-  // console.log(user);
-
   useEffect(() => {
-    console.log("ID params :" +id)
     const fetchData = async () => {
       try {
         const res = await dispatch(getAddressbyId(id)); // Fetch the address data by ID
-        console.log("User Response:", res);
   
-        if (res && res.data) {
+        if (res && res?.data) {
           // Assuming res.data contains the address information
           setInputs({
             name: res.data.name || "",
@@ -153,11 +144,7 @@ const { id } = route.params;
   };
   
   const handleSubmit = async () => {
-    // if (!validate()) {
-    //   setLoading1(false);
-    //   return;
-    // }
-  
+
     try {
       setLoading1(true);
   
@@ -174,15 +161,12 @@ const { id } = route.params;
         id : id
       };
   
-      console.log("FormData object as JSON:", formData1);
   
       // Send the updated address data by ID in the API request
       const res = await dispatch(updateAddress(formData1)); // updateAddressById should be defined in actions
-      console.log(res);
   
-      if (res && res.success) {
-        ToastAndroid.show(res.message, ToastAndroid.SHORT);
-        console.log("Response :", res);
+      if (res && res?.success) {
+        ToastAndroid.show(res?.message, ToastAndroid.SHORT);
         navigation.goBack(); // Go back to the previous screen
 
       }
@@ -267,7 +251,7 @@ const { id } = route.params;
  
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.primary} style="light" />
+      <StatusBar backgroundColor={COLORS.user_front_theme_color} style="dark" />
       <View style={{ paddingTop: 20 }}>
         <Header
           title={"Edit Address"}

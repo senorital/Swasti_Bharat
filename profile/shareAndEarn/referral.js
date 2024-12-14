@@ -5,45 +5,57 @@ import {
   StyleSheet,
   StatusBar,
   TouchableOpacity,
-  BackHandler,
   SafeAreaView,
   Image,
 } from "react-native";
-import { COLORS, icons } from "../../components/constants";
-import { useDispatch, useSelector } from "react-redux";
+import { COLORS } from "../../components/constants";
 import * as Clipboard from "expo-clipboard";
-import Constants from "expo-constants";
 import Toast from "react-native-toast-message";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
-import HalfCircleWithSections from "../../roles/instructor/components/chakra/chakra";
-import { getReferralData,getchakras } from '../../redux/actions/instructor/redeem/redeem';
-import { useIsFocused } from '@react-navigation/native'; // Import the useIsFocused hook
-import { useNavigation } from '@react-navigation/native';
+import { useDispatch } from 'react-redux';
+import { useIsFocused } from '@react-navigation/native';
+import NetInfo from "@react-native-community/netinfo";  // Import NetInfo
 
-const chakraColors = {
-  chakra1: COLORS.red,
-  chakra2: COLORS.orange,
-  chakra3: COLORS.yellow,
-  chakra4: COLORS.green,
-  chakra5: COLORS.blue,
-  chakra6: COLORS.purple,
-  chakra7: COLORS.dark_purple,
+import { getchakras, getReferralData } from '../../redux/actions/instructor/redeem/redeem';
+import HalfCircleWithSections from "../../roles/instructor/components/chakra/chakra";
+
+// Define a mapping of chakra images based on chakra number
+const chakraImages = {
+  1: require('../../assets/chakra/1.png'),
+  2: require('../../assets/chakra/2.png'),
+  3: require('../../assets/chakra/3.png'),
+  4: require('../../assets/chakra/4.png'),
+  5: require('../../assets/chakra/5.png'),
+  6: require('../../assets/chakra/6.png'),
+  7: require('../../assets/chakra/7.png'),
 };
 
 const Referral = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { referrals = [], loadingReferrals, error } = useSelector((state) => state.referralData); // Provide default values
-  const { chakras = [], loadingChakras, chakraError } = useSelector((state) => state.referralData);
-  const isFocused = useIsFocused(); // Get the isFocused value
+  const [chakras, setChakras] = useState([]);
+  const [referralData, setReferralData] = useState([]);
+  const [loadingChakras, setLoadingChakras] = useState(true);
+  const [error, setError] = useState(null);
+  const [isConnected, setIsConnected] = useState(true);  // State to track network status
 
   const bottomSheetModalRef = useRef(null);
-  const snapPoints = ["40%", "90%"];
+  const snapPoints = ["40%"];
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    // Check network status on mount
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected);  // Update isConnected state
+    });
+
+    // Cleanup on component unmount
+    return () => {
+      unsubscribe(); // Unsubscribe from network state changes
+    };
+  }, []);
 
   useEffect(() => {
     bottomSheetModalRef.current?.present();
-
- 
   }, [navigation]);
 
   useEffect(() => {
@@ -53,14 +65,65 @@ const Referral = ({ navigation }) => {
       bottomSheetModalRef.current?.dismiss();
     };
   }, []);
- // Process chakras to count quantities and align images
-  // Ensure chakras is an array before processing
-  const processedChakras = Array.isArray(chakras) ? chakras.reduce((acc, chakra) => {
+
+  useEffect(() => {
+    if (isConnected) {
+      const fetchChakras = async () => {
+        try {
+          const response = await dispatch(getchakras());
+          if (response?.success) {
+            setChakras(response?.data);
+          } else {
+            setError("Failed to fetch chakras");
+          }
+        } catch (err) {
+          setError("Error fetching chakras");
+        } finally {
+          setLoadingChakras(false);
+        }
+      };
+
+      if (isFocused) {
+        fetchChakras();
+      }
+    } else {
+      setError("No internet connection");
+    }
+  }, [isConnected, isFocused]);
+
+  useEffect(() => {
+    if (isConnected) {
+      const fetchReferralData = async () => {
+        try {
+          const response = await dispatch(getReferralData());
+
+          if (response?.success) {
+            setReferralData(response?.data);
+          } else {
+            setError("No referral data available or failed to fetch.");
+          }
+        } catch (err) {
+          console.error("Error fetching referral data:", err);
+          setError("Error fetching referral data");
+        }
+      };
+
+      if (isFocused) {
+        fetchReferralData();
+      }
+    } else {
+      setError("No internet connection");
+    }
+  }, [isConnected, isFocused]);
+
+  const processedChakras = chakras.reduce((acc, chakra) => {
     if (chakra.quantity > 0) {
       acc[chakra.chakraNumber] = (acc[chakra.chakraNumber] || 0) + chakra.quantity;
     }
     return acc;
-  }, {}) : {};
+  }, {});
+
+  const totalChakras = Object.values(processedChakras).reduce((a, b) => a + b, 0);
 
   const copyToClipboard = () => {
     Clipboard.setString(inviteLink);
@@ -78,69 +141,44 @@ const Referral = ({ navigation }) => {
       </SafeAreaView>
       <View style={styles.totalContainer}>
         <View style={styles.total}>
-          <Text style={styles.chakraText}>Total Chakras</Text>
-          {/* <View style={styles.imagesContainer}> */}
-            {/* {Object.keys(chakraColors).map((chakra, index) => {
-              const borderColor = index < 4 ? chakraColors[chakra] : 'transparent';
-              return (
-                // <Image
-                //   key={index}
-                //   source={icons[chakra]}
-                //   style={[
-                //     styles.image,
-                //     { borderColor, zIndex: 10 - index, left: index * 10 },
-                //   ]}
-                // />
-              );
-            })} */}
-          {/* </View> */}
-          <Text style={styles.chakraText}>
-            {Object.values(processedChakras).reduce((a, b) => a + b, 0)}
-          </Text>    
-              </View>
-              <TouchableOpacity style={styles.redeemButton}>
+          <Text style={styles.chakraText}>Total Chakras :</Text>
+          <Text style={styles.chakraText}>{totalChakras}</Text>
+        </View>
+        <TouchableOpacity style={styles.redeemButton}>
           <Text style={styles.redeem}>Redeem Now</Text>
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.content}>
         <BottomSheetModal
           ref={bottomSheetModalRef}
           index={0}
           snapPoints={snapPoints}
           style={styles.bottomSheet}
-          enablePanDownToClose={false} // Allow swipe down to close
-          enableContentPanningGesture={true} // Enable panning gestures on content
-       
+          enablePanDownToClose={false}
+          enableContentPanningGesture={true}
         >
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Your Referrals</Text>
-            {loadingReferrals && <Text>Loading referrals...</Text>}
-            {error && <Text>Error: {error}</Text>}
-            {!Array.isArray(referrals) ? (
-              <Text>No referrals available</Text>
-            ) : referrals.length === 0 ? (
-              <Text>No referrals available</Text>
-            ) : (
-              referrals.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.studioCard}
-                >
-                  <View style={styles.row}>
-                    <Text style={styles.number}>{index + 1}</Text>
-                    <View style={styles.nameContainer}>
-                      <Text style={styles.title}>{item.joinerName}</Text>
-                    </View>
-                    <Image source={item.image} style={styles.studioImage} />
-                  </View>
-                  <View style={styles.hr} />
-                </TouchableOpacity>
-              ))
-            )}
+              <Text style={styles.modalTitle}>Your Referrals</Text>
+              {loadingChakras && <Text>Loading referrals...</Text>}
+              {error && <Text>Error: {error}</Text>}
+              {!loadingChakras && referralData.length === 0 && <Text>No referrals available</Text>}
+
+              {referralData.map((referral, index) => (
+                <View key={referral.id} style={styles.referralItem}>
+                  <Text style={styles.referralText}>{referral.joinerName}</Text>
+                  {chakraImages[referral.chakraNumber] ? (
+                    <Image
+                      source={chakraImages[referral.chakraNumber]}
+                      style={styles.chakraImage}
+                    />
+                  ) : (
+                    <Text style={styles.referralText}>Image not available</Text>
+                  )}
+                </View>
+              ))}
             </View>
-           
           </View>
         </BottomSheetModal>
       </View>
@@ -148,28 +186,13 @@ const Referral = ({ navigation }) => {
   );
 };
 
-
 const styles = StyleSheet.create({
   redeem: {
     fontFamily: 'Poppins_Medium',
     color: COLORS.white,
     fontSize: 12,
-    textAlign:'center',
-    padding:5
-  },
-  image: {
-    width: 20,
-    height: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 8,
-    position: 'absolute',
-  },
-  imagesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
-    width: 80, // Adjust this width based on the number of images and overlap
+    textAlign: 'center',
+    padding: 5,
   },
   totalContainer: {
     marginHorizontal: 20,
@@ -185,13 +208,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 6,
   },
+  chakraText: {
+    fontFamily: 'Poppins',
+    padding: 5,
+    fontSize: 14,
+  },
   redeemButton: {
     borderRadius: 10,
     padding: 5,
     backgroundColor: COLORS.primary,
     marginLeft: 10,
-    height:40,
-    marginTop:3
+    height: 40,
+    marginTop: 3,
   },
   container: {
     flex: 1,
@@ -208,32 +236,15 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     justifyContent: 'center',
   },
-  hr: {
-    position: "relative",
-    width: "100%",
-    borderBottomColor: COLORS.grey,
-    borderBottomWidth: 1,
-    opacity: 0.1,
-    marginTop: 0,
-  },
-  studioImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    marginLeft: 10,
-  },
   modalTitle: {
-    fontFamily: "PoppinsSemiBold",
+    fontFamily: "Poppins-SemiBold",
     fontSize: 17,
     textAlign: 'left',
-    marginBottom: 10,
-    marginVertical: 20,
   },
   modalContent: {
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: COLORS.background,
   },
   bottomSheet: {
     borderRadius: 20,
@@ -241,37 +252,27 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: COLORS.primary,
     borderTopLeftRadius: 20,
-    borderColor: COLORS.background,
-    borderWidth: 1,
     borderTopRightRadius: 20,
     overflow: 'hidden',
   },
-  row: {
+  chakraImage: {
+    width: 30,
+    height: 30,
+    resizeMode: 'contain',
+  },
+  referralItem: {
+    marginBottom: 5,
+    padding: 10,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: COLORS.icon_background,
+    borderRadius: 8,
   },
-  number: {
-    fontFamily: "Poppins",
-    fontSize: hp(2),
-    marginRight: 10,
-  },
-  nameContainer: {
-    flex: 1,
-  },
-  title: {
-    fontFamily: 'Poppins_Medium',
+  referralText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
-    marginVertical: 10,
-  },
-  chakraText: {
-    fontFamily: 'Poppins_Medium',
-    fontSize: 12,
-    color: COLORS.primary,
-    padding: 5,
-    borderRadius: 10,
+    color: COLORS.darkGray,
   },
 });
 

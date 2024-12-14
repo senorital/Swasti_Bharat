@@ -1,16 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, ScrollView, Image, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import {
+  Text,
+  View,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Modal,
+  FlatList,
+  BackHandler,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+} from 'react-native';
 import { useDispatch } from 'react-redux';
-import Header from '../Header';
+import Header from '../../../../components/header/Header';
 import { getHomeTutorById } from '../../../../redux/actions/user/homeTutor/homeTutor';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { windowHeight, windowWidth } from '../../../../utils/Dimensions';
 import { COLORS } from '../../../../components/constants';
 import { StatusBar } from 'expo-status-bar';
 import Button from '../../components/Form/Button';
+
 const ShowInstructorForUser = ({ navigation, route }) => {
-  const { homeTutorId } = route.params;
+  const { homeTutorId, latitude, longitude, distance } = route.params;
   const dispatch = useDispatch();
+  const [numColumns, setNumColumns] = useState(2); // Initial number of columns
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [images, setImages] = useState([]);
@@ -21,15 +38,43 @@ const ShowInstructorForUser = ({ navigation, route }) => {
   ];
 
   useEffect(() => {
+    const handleBackPress = () => {
+      if (navigation.isFocused()) {
+        navigation.goBack();
+        return true;
+      }
+      return false;
+    };
+
+    BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+    return () => {
+      BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
+    };
+  }, [navigation]);
+
+  const openModal = (image) => {
+    setSelectedImage(image);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedImage(null);
+  };
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await dispatch(getHomeTutorById(homeTutorId));
-        if (res && res.success && res.data) {
-          const tutorData = res.data;
+
+        const params = { latitude, longitude, distance, homeTutorId };
+        const res = await dispatch(getHomeTutorById(params));
+
+        if (res?.success) {
+          const tutorData = res?.data;
           tutorData.yogaFor = JSON.parse(tutorData.yogaFor || '[]');
           tutorData.language = JSON.parse(tutorData.language || '[]');
-          tutorData.specilization = JSON.parse(tutorData.specilization || '[]');
+          tutorData.specialization = JSON.parse(tutorData.specialization || '[]');
           setData(tutorData);
           setImages(tutorData.images || []);
         } else {
@@ -44,10 +89,13 @@ const ShowInstructorForUser = ({ navigation, route }) => {
       }
     };
 
-    fetchData();
-  }, [dispatch, homeTutorId]);
+    if (latitude && longitude && distance && homeTutorId) {
+      fetchData();
+    } else {
+      console.warn('Missing required parameters for fetching data');
+    }
+  }, [latitude, longitude, distance, homeTutorId]);
 
- 
   const handleBookButtonPress = () => {
     if (data) {
       navigation.navigate('BookAppointment', {
@@ -62,17 +110,21 @@ const ShowInstructorForUser = ({ navigation, route }) => {
   };
 
   const renderApiImageItem = ({ item }) => (
-    <Image source={{ uri: item.path }} style={styles.carouselImage} />
+    <TouchableOpacity onPress={() => openModal(item.path)}>
+      <Image source={{ uri: item.path }} style={styles.carouselImage} />
+    </TouchableOpacity>
   );
 
   const renderBannerItem = ({ item }) => (
-    <Image source={item.image} style={styles.carouselImage} />
+    <TouchableOpacity onPress={() => openModal(item.image)}>
+      <Image source={item.image} style={styles.carouselImage} />
+    </TouchableOpacity>
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -87,9 +139,11 @@ const ShowInstructorForUser = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header title={data.homeTutorName} icon={'chevron-left'} />
-      <StatusBar backgroundColor={COLORS.primary} style="light" />
-
+      <View style={{paddingTop:20}}>
+      <Header title={data.homeTutorName} icon={require("../../../../assets/back.png")} />
+      </View>
+      <StatusBar backgroundColor={COLORS.user_front_theme_color} style="dark" />
+      
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <View style={styles.bannerContainer}>
           <FlatList
@@ -100,74 +154,203 @@ const ShowInstructorForUser = ({ navigation, route }) => {
             showsHorizontalScrollIndicator={false}
           />
         </View>
-        <View style={styles.section}>
-          <Text style={styles.heading}>Bio</Text>
-          <Text style={styles.text}>{data.instructorBio}</Text>
-        </View>
-        <View style={styles.section}>
-          <Text style={styles.heading}>Languages</Text>
-          <FlatList
-            data={data.language}
-            renderItem={({ item }) => <Text style={styles.itemText}>{item}</Text>}
-            keyExtractor={(item, index) => index.toString()}
-            numColumns={3}
-          />
-        </View>
-        <View style={styles.section}>
-          <Text style={styles.heading}>Specialisation</Text>
-          <FlatList
-            data={data.specilization}
-            renderItem={({ item }) => <Text style={styles.itemText}>{item}</Text>}
-            keyExtractor={(item, index) => index.toString()}
-            numColumns={3}
-          />
-        </View>
-        <View style={styles.section}>
-          <Text style={styles.heading}>Session Offered</Text>
-          {data.privateSessionPrice_Day && (
-            <Text style={styles.itemText}>{`Individual Class (Day) - ₹ ${data.privateSessionPrice_Day}`}</Text>
-          )}
-          {data.privateSessionPrice_Month && (
-            <Text style={styles.itemText}>{`Individual Class (Month) - ₹ ${data.privateSessionPrice_Month}`}</Text>
-          )}
-          {data.groupSessionPrice_Day && (
-            <Text style={styles.itemText}>{`Group Class (Day) - ₹ ${data.groupSessionPrice_Day}`}</Text>
-          )}
-          {data.groupSessionPrice_Month && (
-            <Text style={styles.itemText}>{`Group Class (Month) - ₹ ${data.groupSessionPrice_Month}`}</Text>
-          )}
-        </View>
-        <View style={[styles.section, { paddingBottom: windowHeight / 10 }]}>
-          <Text style={styles.heading}>Giving Yoga Sessions for</Text>
-          <FlatList
-            data={data.yogaFor}
-            renderItem={({ item }) => <Text style={styles.itemText}>{item}</Text>}
-            keyExtractor={(item, index) => index.toString()}
-            numColumns={2}
-          />
-        </View>
+        {/* Conditionally render Bio section */}
+        {data.instructors && (
+          <View style={styles.section}>
+            <Text style={styles.heading}>Total Experience</Text>
+            <Text style={[styles.itemText,{width:'30%',textAlign:'center'}]}>{data.instructors.totalExperienceInYears} Years</Text>
+          </View>
+        )}
+        {(data.isGroupSO || data.isPrivateSO) && (
+  <View style={styles.section}>
+    <Text style={styles.heading}>Service Type</Text>
+    <Text style={[styles.itemText,{width:'30%',textAlign:'center'}]}>
+      {data.isGroupSO && "Group"}
+      {data.isGroupSO && data.isPrivateSO && " and "}
+      {data.isPrivateSO && "Private"}
+    </Text>
+  </View>
+)}       
+
+{data.hTPrices && data.hTPrices.length > 0 && (
+  <View style={styles.section}>
+    <Text style={styles.heading}>Package Prices</Text>
+    {data.hTPrices.map((price, index) => (
+      <View key={price.id} style={styles.priceContainer}>
+        <Text style={styles.itemText}>
+           {price.durationType} ({price.priceName})
+        </Text>
+        {price.private_PricePerDayPerRerson && (
+          <Text style={styles.itemText}>
+            Private Price Per Day Per Person: ₹{price.private_PricePerDayPerRerson}
+          </Text>
+        )}
+        {price.group_PricePerDayPerRerson && (
+          <Text style={styles.itemText}>
+            Group Price Per Day Per Person: ₹{price.group_PricePerDayPerRerson}
+          </Text>
+        )}
+        {price.private_totalPricePerPerson && (
+          <Text style={styles.itemText}>
+            Private Total Price Per Person: ₹{price.private_totalPricePerPerson}
+          </Text>
+        )}
+        {price.group_totalPricePerPerson && (
+          <Text style={styles.itemText}>
+            Group Total Price Per Person: ₹{price.group_totalPricePerPerson}
+          </Text>
+        )}
+      </View>
+    ))}
+  </View>
+)}
+
+
+      {data.experiences && data.experiences.length > 0 && (
+  <View style={styles.section}>
+    <Text style={styles.heading}>Experience</Text>
+    {data.experiences.map((exp, index) => (
+      <View key={exp.id} style={styles.experienceContainer}>
+        <Text style={styles.text}>
+          {exp.role}
+        
+          {exp.joinDate !== "0000-00-00" ? ` ,  ${exp.joinDate}` : ""}
+        </Text>
+        <Text style={styles.text}>{exp.workHistory ? `${exp.workHistory}` : ""}</Text>
+      </View>
+    ))}
+  </View>
+)}
+
+       
+
+        {/* Conditionally render Languages section */}
+        {data.language.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.heading}>Languages</Text>
+            <FlatList
+              data={data.language}
+              renderItem={({ item }) => <Text style={styles.itemText}>{item}</Text>}
+              keyExtractor={(item, index) => index.toString()}
+              numColumns={3}
+            />
+          </View>
+        )}
+
+        {/* Conditionally render Specialization section */}
+        {data.specialization.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.heading}>Specialization</Text>
+            <FlatList
+              data={data.specialization}
+              renderItem={({ item }) => <Text style={styles.itemText}>{item}</Text>}
+              keyExtractor={(item, index) => index.toString()}
+              numColumns={3}
+            />
+          </View>
+        )}
+
+       
+        {/* Conditionally render Giving Yoga Sessions For section */}
+        {data.yogaFor.length > 0 && (
+  <View style={[styles.section]}>
+    <Text style={styles.heading}>Giving Yoga Sessions for</Text>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      // contentContainerStyle={{ paddingHorizontal: 10 }}
+    >
+      {data.yogaFor.map((item, index) => (
+      
+          <Text style={styles.itemText}>{item}</Text>
+      
+      ))}
+    </ScrollView>
+  </View>
+)}
+
+{data.serviceAreas.length > 0 && (
+  <View style={[styles.section,{marginBottom:100}]}>
+    <Text style={styles.heading}>Service Locations</Text>
+   
+      {data.serviceAreas.map((item, index) => (
+       <View key={index} style={styles.row}>
+       <View style={styles.column}>
+         <Ionicons name="location-sharp" color={COLORS.primary} size={15} style={styles.icon} />
+         <Text style={styles.columnValue}>{item.locationName}</Text>
+       </View>
+       </View>
+      ))}
+  </View>
+)}
+
+
       </ScrollView>
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={closeModal}>
+        <View style={styles.modalContainer}>
+          <TouchableOpacity style={styles.modalCloseButton} onPress={closeModal}>
+            <MaterialCommunityIcons name="close" size={30} color="white" />
+          </TouchableOpacity>
+          <Image source={{ uri: selectedImage }} style={styles.modalImage} />
+        </View>
+      </Modal>
+
       <View style={styles.fixedButtonsContainer}>
-        {/* <TouchableOpacity style={styles.button} onPress={handleBookButtonPress}>
-          <Text style={styles.buttonText}> Book</Text>
-        </TouchableOpacity> */}
-        <Button title="Book Session" onPress={handleBookButtonPress}/>
-        {/* <TouchableOpacity style={[styles.button, styles.chatButton]} onPress={() => console.log('Chat button pressed')}>
-          <MaterialCommunityIcons name="chat" size={24} color="white" />
-          <Text style={styles.buttonText}> Chat</Text>
-        </TouchableOpacity> */}
+        <Button title="Book Session" onPress={handleBookButtonPress} />
       </View>
     </View>
   );
 };
+
+
 const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingBottom: 10,
+  },
+  column: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 10,
+  },
+  icon: {
+    marginRight: 5,
+  },
+  columnText: {
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 5,
+  },
+  columnValue: {
+    color: '#555',
+    fontFamily:'Poppins',
+    fontSize:13
+  },
+  locationContainer: {
+    marginRight: 20,
+    alignItems: 'center',
+    flexDirection:'row'
+  },
+  locationName: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    fontFamily:'Poppins'
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f1f2f6',
   },
   contentContainer: {
     paddingHorizontal: 20,
     paddingBottom: windowHeight / 50,
+
   },
   loadingContainer: {
     flex: 1,
@@ -180,18 +363,46 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 10,
     marginHorizontal: 5,
+    marginVertical:5,
   },
   section: {
-    marginBottom: 5,
+    marginVertical:5,
+    borderRadius:8,
+    padding:12,
+    backgroundColor:COLORS.white
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 10,
+  },
+  modalImage: {
+    width: windowWidth - 40,
+    height: windowHeight - 100,
+    resizeMode: 'contain',
   },
   heading: {
     fontFamily: 'Poppins-Medium',
-    fontSize: 16,
-    padding:5,
-    borderRadius:5,
-    marginVertical: 20,
+    fontSize: 15,
+    // padding:5,
+    // borderRadius:5,
+    marginVertical: 5,
     // backgroundColor: COLORS.notifyicon
   },
+   experienceContainer: {
+    marginBottom: 10,
+    padding:8,
+    backgroundColor: '#eeedfc',
+    borderRadius:10,
+  },
+
   text: {
     fontFamily: 'Poppins',
     fontSize: 14,
@@ -202,8 +413,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     backgroundColor: '#eeedfc',
     borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+    padding: 8,
+    marginVertical:5,
     marginRight: 8,
   },
   tabsContainer: {
@@ -232,8 +443,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingVertical: 10,
-    marginLeft: 12,
-    marginRight: 12,
+    // marginLeft: 12,
+    // marginRight: 12,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',

@@ -51,7 +51,6 @@ const ExperienceDetails = ({ navigation, route }) => {
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
   }
-  // console.log("experience",id)
 
   const handleDelete = (id) => {
     Alert.alert(
@@ -72,7 +71,6 @@ const ExperienceDetails = ({ navigation, route }) => {
 
               // Call the function to delete the item
               const res = await dispatch(deleteExperience(id));
-              console.log(res)
               if (res.success) {
                 Toast.show({
                   type: "success",

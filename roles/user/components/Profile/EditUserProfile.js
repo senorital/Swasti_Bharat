@@ -26,14 +26,12 @@ import CustomAlertModal from "../../../../components/CustomAlert/CustomAlertModa
 import {  getUser } from "../../../../redux/actions/auth/auth";
 import {  updateUser, useraddProfilePic } from "../../../../redux/actions/user/authActions";
 import * as FileSystem from 'expo-file-system';
-import { useFocusEffect } from '@react-navigation/native';
 
 
 const EditUserProfile = ({ navigation }) => {
   const totalSteps = 1;
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
-  console.log("User NAme123 :" + user.name)
   const [inputs, setInputs] = useState({
     name: "",
     email: "",
@@ -99,31 +97,22 @@ const EditUserProfile = ({ navigation }) => {
 
 
 
-
-
-  // console.log(user);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await dispatch(getUser()); // Fetch the user data
   
-        console.log("User Response:", res);
-  
-        // Check if the response contains the expected structure
-        if (res && res.data && res.data.profilePic) {
-          const imageUri = res.data.profilePic.path; // Access profile picture path
+        if (res && res?.data && res?.data?.profilePic) {
+          const imageUri = res?.data?.profilePic.path; 
           if (imageUri) {
-            setImage(imageUri); // Set the profile picture
-            console.log("Profile image set:", imageUri);
+            setImage(imageUri);
           }
         } else {
-          console.log("Profile picture not found in response.");
         }
         
       } catch (error) {
         console.error('Error fetching data:', error);
-        const msg = error.response?.data?.message;
+        const msg = error.res?.data?.message;
         ToastAndroid.show(msg || 'An error occurred. Please try again.', ToastAndroid.SHORT);
       }
     };
@@ -171,35 +160,41 @@ const EditUserProfile = ({ navigation }) => {
       isValid = false;
     }
 
+    if (!inputs.email) {
+      handleError("Please input email", "email");
+      isValid = false;
+    }
+
     // if (!image) {
     //   handleError("Please upload your image", "image");
     //   isValid = false;
     // }
     try {
+      if (!isValid) {
+        return;
+      }
+  
         setLoading1(true);
-        // console.log("etwefwef" +  String(inputs.location.longitude));
         let formData1 = {
        
           name: inputs.name,
-       
+          email: inputs.email,
+
         };
       
       
       
-        console.log("FormData object as JSON:", formData1);
       
         // Send the formData object as JSON in the API request
         const res = await dispatch(updateUser(formData1))
-        console.log(res);
         if (res && res.success) {
 
-            ToastAndroid.show(res.message, ToastAndroid.SHORT);
-           console.log("Response :" + res)
+            ToastAndroid.show(res?.message, ToastAndroid.SHORT);
           navigation.goBack();    
           }      
         } catch (error) {
           console.error("Error occurred while updating profile:", error);
-          const msg = error.response?.data?.message;
+          const msg = error.res?.data?.message;
           ToastAndroid.show(msg || 'An error occurred. Please try again.', ToastAndroid.SHORT);
         } finally {
           setLoading1(false);
@@ -208,149 +203,111 @@ const EditUserProfile = ({ navigation }) => {
   };
 
 
-  const addProfilePics = async (imageUri) => {
-    try {
-      console.log("addProfilePics function called");
+  const requestPermissions = async () => {
+    const mediaPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
+    // const cameraPermission = await ImagePicker.getCameraPermissionsAsync();
   
-      if (!imageUri) {
-        console.log("No image URI provided");
-        throw new Error("No image URI provided");
-      }
-  
-      console.log("Image URI is valid, imageUri: " + imageUri);
-  
-      const formData = new FormData();
-      
-      formData.append("StudentProfile", {
-        uri: imageUri,
-        name: `image.jpg`,
-        type: "image/jpeg",
-      });
-  
-      console.log("FormData object created:", formData);
-  
-      // Dispatch the action to upload the profile picture
-      const res = await dispatch(useraddProfilePic(formData));
-  
-      // console.log("Response from dispatch:", res);
-  
-      if (res.error) {
-        console.log("Error uploading profile image:", res.error);
-        console.error("Response details:", res);
-      } else {
-        console.log("Profile image uploaded successfully:", res);
-      }
-    } catch (error) {
-      console.error("Error in addProfilePics:", error.message);
+    // If permissions are already granted, return true
+    if (mediaPermission.granted) {
+      return true;
     }
+  
+    // Otherwise, request permissions
+    const mediaRequest = mediaPermission.granted
+      ? true
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    // Check if both permissions are granted
+    if (!mediaRequest.granted) {
+      Alert.alert(
+        "Permissions Required",
+        "Please grant camera and media library permissions to upload a profile picture.",
+        [{ text: "OK" }]
+      );
+      return false;
+    }
+    
+    return true;
   };
   
-  // const pickImage = async () => {
-  //   try {
-  //     console.log("pickImage function called");
-  
-  //     const result = await ImagePicker.launchImageLibraryAsync({
-  //       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-  //       aspect: [4, 3],
-  //       quality: 1,
-  //     });
-  
-  //     console.log("Result from ImagePicker:", result);
-  
-  //     if (!result.canceled && result.assets && result.assets.length > 0) {
-  //       const imageUri = result.assets[0].uri;
-  //       console.log("Image selected, URI:", imageUri);
-  
-  //       // Get image file info including size
-  //       const imageInfo = await FileSystem.getInfoAsync(imageUri);
-  //       const imageSizeInBytes = imageInfo.size;
-  //       const imageSizeInKB = (imageSizeInBytes / 1024).toFixed(2); // Convert to KB
-  //       const imageSizeInMB = (imageSizeInBytes / (1024 * 1024)).toFixed(2); // Convert to MB
-  
-  //       console.log(`Image Size: ${imageSizeInBytes} bytes (${imageSizeInKB} KB, ${imageSizeInMB} MB)`);
-  
-  //       // Ensure setImage and setErrors are called before addProfilePics
-  //       setImage(imageUri);
-  //       setErrors(false);
-  //       console.log("setImage and setErrors called with imageUri:", imageUri);
-  
-  //       // Call addProfilePics with imageUri
-  //       await addProfilePics(imageUri);
-  //       console.log("addProfilePics function called with imageUri:", imageUri);
-  //     } else {
-  //       console.log("Image selection was canceled or no assets found");
-  //       setErrors(true);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error in pickImage:", error.message);
-  //   }
-  // };
-
+  // Function to pick an image or take a photo
   const pickImage = async () => {
     try {
-      console.log("pickImage function called");
   
-      // Request permission to access the media library
-      const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (mediaLibraryPermission.status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Sorry, we need permission to access your media library to proceed.",
-          [{ text: "OK" }]
-        );
+      // Request permissions
+      const hasPermission = await requestPermissions();
+      if (!hasPermission) {
         return;
       }
+      const mediaPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
+        if (mediaPermission.granted) {
+        // You can directly choose the source here (e.g., gallery or camera)
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 1,
+        });
   
-      // Request permission to access the camera
-      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-      if (cameraPermission.status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Sorry, we need permission to access your camera to proceed.",
-          [{ text: "OK" }]
-        );
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const imageUri = result.assets[0].uri;
+          await handleImageSelection(imageUri);
+        } else {
+        }
         return;
       }
-  
-      // Launch the image picker to select an image
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images, // You can change this to include videos if needed
-        aspect: [4, 3], // Adjust aspect ratio to your preference
-        quality: 1, // Image quality (0 to 1)
-      });
-  
-      console.log("Result from ImagePicker:", result);
-  
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const imageUri = result.assets[0].uri;
-        console.log("Image selected, URI:", imageUri);
-  
-        // Get image file info including size
-        const imageInfo = await FileSystem.getInfoAsync(imageUri);
-        const imageSizeInBytes = imageInfo.size;
-        const imageSizeInKB = (imageSizeInBytes / 1024).toFixed(2); // Convert to KB
-        const imageSizeInMB = (imageSizeInBytes / (1024 * 1024)).toFixed(2); // Convert to MB
-  
-        console.log(
-          `Image Size: ${imageSizeInBytes} bytes (${imageSizeInKB} KB, ${imageSizeInMB} MB)`
-        );
-  
-        // Ensure setImage and setErrors are called before addProfilePics
-        setImage(imageUri);
-        setErrors(false);
-        console.log("setImage and setErrors called with imageUri:", imageUri);
-  
-        // Call addProfilePics with imageUri
-        await addProfilePics(imageUri);
-        console.log("addProfilePics function called with imageUri:", imageUri);
-      } else {
-        console.log("Image selection was canceled or no assets found");
-        setErrors(true);
-      }
+
     } catch (error) {
       console.error("Error in pickImage:", error.message);
     }
   };
+  
+  
+      const handleImageSelection = async (imageUri) => {
+      try {
+    
+        const imageInfo = await FileSystem.getInfoAsync(imageUri);
+        const imageSizeInBytes = imageInfo.size;
+        const imageSizeInKB = (imageSizeInBytes / 1024).toFixed(2); // Convert to KB
+        const imageSizeInMB = (imageSizeInBytes / (1024 * 1024)).toFixed(2); // Convert to MB
+    
+    
+        setImage(imageUri);
+        setErrors(false);
+    
+        // Call addProfilePics with imageUri
+        await addProfilePics(imageUri);
+      } catch (error) {
+        console.error("Error handling image selection:", error.message);
+      }
+    };
+
+    const addProfilePics = async (imageUri) => {
+      try {
+    
+        if (!imageUri) {
+          throw new Error("No image URI provided");
+        }
+    
+    
+        const formData = new FormData();
+        
+        formData.append("StudentProfile", {
+          uri: imageUri,
+          name: `image.jpg`,
+          type: "image/jpeg",
+        });
+    
+    
+        // Dispatch the action to upload the profile picture
+        const res = await dispatch(useraddProfilePic(formData));
+    
+    
+        if (res.error) {
+          console.error("Response details:", res);
+        } else {
+        }
+      } catch (error) {
+      }
+    };
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -375,14 +332,15 @@ const EditUserProfile = ({ navigation }) => {
             error={errors.name}
             isRequired={true}
           />
-          <Input
-            label="Email"
-            placeholder="Email"
-            value={inputs.email}
-            isRequired={true}
-            editable={false} // Set editable to false to make it read-only
-
-          />
+        <Input
+          onChangeText={(text) => handleOnchange(text, "email")}
+          onFocus={() => handleError(null, "email")}
+          label="Email"
+          placeholder="Email"
+          value={inputs.email}
+          error={errors.email}
+         isRequired={true}
+        />
           <Input
             label="Mobile Number"
             placeholder="Mobile Number"
@@ -451,7 +409,7 @@ const EditUserProfile = ({ navigation }) => {
  
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.primary} style="light" />
+      <StatusBar backgroundColor={COLORS.user_front_theme_color} style="light" />
       <View style={{ paddingTop: 20 }}>
         <Header
           title={"Edit Profile"}

@@ -12,7 +12,7 @@ const Button = ({title, onPress = () => {}}) => {
         width: '100%',
       
         backgroundColor: COLORS.primary,
-        // marginVertical: 20,
+        marginVertical: 20,
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius:10

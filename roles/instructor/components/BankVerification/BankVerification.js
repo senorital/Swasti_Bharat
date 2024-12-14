@@ -23,10 +23,9 @@ import { useNavigation } from "@react-navigation/native";
 import { COLORS, icons } from "../../../../components/constants";
 import { addBankDetails } from "../../../../redux/actions/auth/auth";
 
-const   BankVerification = () => {
+const BankVerification = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const user = useSelector((state) => state.auth.user);
 
   const [inputs, setInputs] = useState({
     name: user.data.name || "",
@@ -49,11 +48,11 @@ const   BankVerification = () => {
 
   const validate = async (event) => {
     event.preventDefault();
-
+  
     try {
       let isValid = true;
-      const fields = ["bankName", "name", "IFSCCode","accountNumber"];
-
+      const fields = ["bankName", "name", "IFSCCode", "accountNumber"];
+  
       // Check if any field is empty, except for 'name' if it's already populated from the user state
       fields.forEach((field) => {
         if (!inputs[field] && field !== "name") {
@@ -61,14 +60,32 @@ const   BankVerification = () => {
           isValid = false;
         }
       });
-
-    
-
+  
+      // Additional validation for Account Number and IFSC Code
+      if (inputs.accountNumber) {
+        // Check if the Account Number is between 11 and 18 digits
+        if (!/^\d{11,18}$/.test(inputs.accountNumber)) {
+          handleError(
+            "Account number must be between 11 to 18 digits.",
+            "accountNumber"
+          );
+          isValid = false;
+        }
+      }
+  
+      if (inputs.IFSCCode) {
+        // Check if IFSC Code is exactly 11 alphanumeric characters
+        if (!/^[A-Za-z0-9]{11}$/.test(inputs.IFSCCode)) {
+          handleError("IFSC code must be 11 alphanumeric characters.", "IFSCCode");
+          isValid = false;
+        }
+      }
+  
       // If any validation fails, return
       if (!isValid) return;
-
+  
       setLoading1(true);
-
+  
       // Create JSON object
       const formData = {
         name: inputs.name,
@@ -77,49 +94,31 @@ const   BankVerification = () => {
         accountNumber: inputs.accountNumber,
         isVerify: true, // Adding the isVerify field with a value of true
       };
-
-      console.log("formData:", JSON.stringify(formData)); // Ensure this shows the correct data
-
+  
+  
       const res = await dispatch(addBankDetails(formData));
-      console.log("Response:", res); // Log the response to ensure it's correctly awaited and handled
-
+  
       if (res.success) {
-        // Clear any previous errors
         setErrors({});
-        // Show success message using Toast.show
-       
-
-        ToastAndroid.show(res.message,ToastAndroid.SHORT)
-
+        ToastAndroid.show(res.message, ToastAndroid.SHORT);
         navigation.goBack();
-
       } else {
-        // Handle case where submission was not successful
-        // Show error message using Toast.show
-        // Toast.show({
-        //   type: "error",
-        //   text1: res.message || "An error occurred. Please try again.",
-        //   visibilityTime: 2000,
-        //   autoHide: true,
-        // });
-        ToastAndroid.show(res.message || "An error occurred. Please try again.",ToastAndroid.SHORT)
-
+        ToastAndroid.show(
+          res.message || "An error occurred. Please try again.",
+          ToastAndroid.SHORT
+        );
       }
     } catch (error) {
       console.error("Error during form submission:", error);
-      // Show error message using Toast.show
       const msg = error.response?.data?.message || "An error occurred. Please try again.";
-      // Toast.show({
-      //   type: "error",
-      //   text1: msg,
-      //   visibilityTime: 2000,
-      //   autoHide: true,
-      // });
-      ToastAndroid.show(msg,ToastAndroid.SHORT)
+      ToastAndroid.show(msg, ToastAndroid.SHORT);
     } finally {
       setLoading1(false);
     }
   };
+
+  
+  
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -178,6 +177,8 @@ const   BankVerification = () => {
                 label="IFSC Code"
                 placeholder="Enter IFSC Code"
                 error={errors.IFSCCode}
+                maxLength={11}  // Set maxLength to 11 for IFSC code
+
                 keyboardType="numeric"
                 isRequired={true}
               />
@@ -190,6 +191,8 @@ const   BankVerification = () => {
                 error={errors.accountNumber}
                 keyboardType="numeric"
                 isRequired={true}
+                maxLength={18}  // Set maxLength to 18 for account number
+
               />
             </View>
           </View>

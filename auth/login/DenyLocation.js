@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Image, ImageBackground, Alert, Modal, ActivityIndicator } from "react-native";
+import React, { useState , useEffect} from "react";
+import { View, Text, StyleSheet, Image, ImageBackground,BackHandler, Modal, ActivityIndicator, Alert, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
@@ -9,113 +9,127 @@ import * as Location from 'expo-location';
 import { useDispatch } from "react-redux";
 import { setLocationAddress, clearLocationAddress } from "../../redux/actions/instructor/locationActions/locationActions";
 import { CommonActions } from '@react-navigation/native';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const DenyLocation = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState(null);
   const dispatch = useDispatch();
+  
+  useEffect(() => {
+    const backAction = () => {
+      Alert.alert(
+        "Location Permission Needed",
+        "Please allow location permission for smooth functioning of the app.",
+        [
+          { text: "OK", onPress: () => {} },
+        ],
+        { cancelable: false }
+      );
+      return true; // Prevents the back action
+    };
+
+    // Add the event listener for back press
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    // Clean up the event listener on component unmount
+    return () => backHandler.remove();
+  }, []);
+
+  const openAppSettings = () => {
+    Linking.openSettings();
+  };
 
   const requestLocationPermission = async () => {
     setLoading(true);
-    setErrorMsg(null);
     dispatch(clearLocationAddress());
 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      console.log('Permission status:', status);
-
-      if (status === 'granted') {
+      const role = await AsyncStorage.getItem('userRole');
+      
+      if (status === 'granted') { 
         const location = await Location.getCurrentPositionAsync({});
-        console.log('Location:', location);
-
+        const isLocationEnabled = await Location.hasServicesEnabledAsync();
+        if (!isLocationEnabled) {
+          Alert.alert(
+            "Enable Location Services",
+            "Location services are currently disabled. Please enable them in your device settings to continue.",
+            [
+              {
+                text: "Retry",
+                onPress: openAppSettings,
+              },
+            ],
+            { cancelable: false }
+          );
+        }
         const geocode = await Location.reverseGeocodeAsync({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
-        console.log('Geocode:', geocode);
         dispatch(setLocationAddress(geocode[0]));
 
-        // Reset the navigation stack to the initial route
         navigation.dispatch(
           CommonActions.reset({
             index: 0,
-            routes: [{ name: 'Login' }], // Replace 'Login' with the actual name of your login screen
+            routes: [{ name: "appStack", params: { role : role } }],
           })
         );
         return;
-      }
-
-      // Prompt the user to enable location services if not enabled
-      const isLocationEnabled = await Location.hasServicesEnabledAsync();
-      if (!isLocationEnabled) {
-        setErrorMsg('Location services are disabled');
-        Alert.alert(
-          'Location Disabled',
-          'Location services are disabled. Please enable them to use this feature.',
-          [
-            {
-              text: 'Retry',
-              onPress: requestLocationPermission,
-            },
-          ]
-        );
+        
       } else {
-        setErrorMsg('Location permission denied');
-        Alert.alert(
-          'Location Permission Denied',
-          'Location permission is required to use this feature. Please allow location access.',
-          [
-            {
-              text: 'Retry',
-              onPress: requestLocationPermission,
-            },
-          ]
-        );
+        const isLocationEnabled = await Location.hasServicesEnabledAsync();
+        if (!isLocationEnabled) {
+          Alert.alert(
+            "Enable Location Services",
+            "Location services are currently disabled. Please enable them in your device settings to continue.",
+            [
+              {
+                text: "Retry",
+                onPress: openAppSettings,
+              },
+            ],
+            { cancelable: false }
+          );
+        } else {
+          Alert.alert(
+            "Location Permission Denied",
+            "Location permission is required to use this feature. Please allow location access.",
+            [
+              {
+                text: "Retry",
+                onPress: openAppSettings,
+              },
+            ],
+            { cancelable: false }
+          );
+        }
       }
-
     } catch (error) {
-      console.log('Error:', error.message);
-
-      if (error.message === 'Location request failed due to unsatisfied device settings') {
-        setErrorMsg('Location request failed due to unsatisfied device settings');
-        Alert.alert(
-          'Location Request Failed',
-          'Location request failed due to unsatisfied device settings. Please try again.',
-          [
-            {
-              text: 'Retry',
-              onPress: requestLocationPermission,
-            },
-          ]
-        );
-      } else {
-        setErrorMsg('Error fetching location');
-        Alert.alert(
-          'Error',
-          'An error occurred while fetching location.',
-          [
-            {
-              text: 'Retry',
-              onPress: requestLocationPermission,
-            },
-          ]
-        );
-      }
+      Alert.alert(
+        "Location Permission Denied",
+        "Location permission is required to use this feature. Please allow location access.",
+        [{ text: "Retry", onPress: checkLocationPermissions }]
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    requestLocationPermission();
-  }, []);
+  const checkLocationPermissions = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return false;
+    const isLocationEnabled = await Location.hasServicesEnabledAsync();
+    return isLocationEnabled;
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <StatusBar backgroundColor={COLORS.primary} style="light" />
-      <LinearGradient
-        colors={[COLORS.primary, COLORS.primary]}
-        style={{ flex: 1 }}
-      >
+      <LinearGradient colors={[COLORS.primary, COLORS.primary]} style={{ flex: 1 }}>
         <View style={styles.header} />
 
         <View style={styles.container}>
@@ -133,10 +147,7 @@ const DenyLocation = ({ navigation }) => {
           <Text style={styles.message}>
             Allow maps to access your location while you use the app
           </Text>
-          <Button title="Allow" onPress={() => {
-            setErrorMsg(null);  // Reset error message
-            requestLocationPermission();  // Retry location request
-          }} />
+          <Button title="Allow" onPress={requestLocationPermission} />
         </View>
       </LinearGradient>
 
@@ -146,7 +157,7 @@ const DenyLocation = ({ navigation }) => {
           transparent={true}
           animationType="none"
           visible={loading}
-          onRequestClose={() => { }}
+          onRequestClose={() => {}}
         >
           <View style={styles.modalBackground}>
             <View style={styles.activityIndicatorWrapper}>
@@ -183,8 +194,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   markPoint: {
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
     position: 'absolute',
     top: '5%',
     left: '45%',
@@ -206,10 +215,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    // backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   activityIndicatorWrapper: {
-    // backgroundColor: '#FFFFFF',
     height: 100,
     width: 100,
     borderRadius: 10,

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Image, FlatList, StyleSheet, Dimensions } from 'react-native';
+import { COLORS } from '../../../../components/constants';
+import { SCREEN_HEIGHT } from '@gorhom/bottom-sheet';
 
 export const SLIDER_WIDTH = Dimensions.get("window").width;
 export const ITEM_WIDTH = Math.round(SLIDER_WIDTH * 0.9);
@@ -71,22 +73,24 @@ const styles = StyleSheet.create({
   sliderContainer: {
     marginVertical: 20,
     borderRadius: 10,
-
+    width: ITEM_WIDTH
   },
   bannerImage: {
-    width: ITEM_WIDTH,
-    height: 120, // Adjust height as needed
+    width: ITEM_WIDTH/1,
+    height: SCREEN_HEIGHT/7, // Adjust height as needed
     resizeMode: 'cover',
     borderRadius: 10,
-
+    marginHorizontal:3
+    
   },
   pagination: {
     position: 'absolute', // Absolute positioning to overlay on the image
-    bottom: 10, // Position it slightly above the bottom edge of the image
+    bottom: -15, // Position it slightly above the bottom edge of the image
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
+
   },
   dot: {
     height: 6,
@@ -95,7 +99,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   activeDot: {
-    backgroundColor: '#000',
+    backgroundColor: COLORS.primary,
   },
   inactiveDot: {
     backgroundColor: '#ccc',

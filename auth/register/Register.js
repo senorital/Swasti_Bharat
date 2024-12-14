@@ -16,6 +16,8 @@ import { useDispatch } from "react-redux";
 import Button from "../../components/button/Button";
 import Input from "../../components/input/Input";
 import { register, registerEmail } from "../../redux/actions/auth/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NativeModules, Alert } from 'react-native';
 
 const Register = ({ navigation,route}) => {
   const dispatch = useDispatch();
@@ -26,7 +28,8 @@ const Register = ({ navigation,route}) => {
   const [mobileNumber, setMobileNumber] = useState("");
   const [mobileNumberError, setMobileNumberError] = useState("");
   const [address, setAddress] = useState(null);
- 
+  const { InstallReferrerModule } = NativeModules;
+
   const [inputs, setInputs] = useState({
     name: "",
     email: "",
@@ -34,6 +37,7 @@ const Register = ({ navigation,route}) => {
   const [errors, setErrors] = useState({});
   const [showEmail, setShowEmail] = useState(false);
   
+  const [referralCode, setReferralCode] = useState(null);
 
   const handleOnchange = (text, input) => {
     setInputs((prevState) => ({ ...prevState, [input]: text }));
@@ -44,21 +48,34 @@ const Register = ({ navigation,route}) => {
   };
 
 
+  const fetchAndStoreReferralCode = async () => {
+    try {
+      // Call the native method to get the referral code
+      InstallReferrerModule.getInstallReferrerCode((referralCode) => {
+        if (referralCode) {
+          setReferralCode(referralCode);
+          // Show the referral code in an alert first
+          // Alert.alert('Referral Code', `Your referral code is: ${referralCode}`);
+          
+        
+        } else {
+          console.log('No referral code received');
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching referral code:', error);
+    }
+  };
 
+  useEffect(() => {
+    fetchAndStoreReferralCode();
+  }, []);
 
   const handleSubmit = async () => {
     let isValid = true;
   
     if (region === "IN") {
-      // if (!mobileNumber) {
-      //   setMobileNumberError("Please enter your mobile number");
-      //   isValid = false;
-      // } else if (mobileNumber.length !== 10) {
-      //   setMobileNumberError("Mobile number should have 10 digits");
-      //   isValid = false;
-      // } else {
-      //   setMobileNumberError("");
-      // }
+    
     }
   
     if (!inputs.name.trim()) {
@@ -84,11 +101,12 @@ const Register = ({ navigation,route}) => {
     if (isValid && !loading) {
       setLoading(true);
 
+  
       const formData = {
         name: inputs.name.trim(),
         email: inputs.email.trim(),
         phoneNumber: phoneNumber, // Assuming phoneNumber is already validated
-
+        referralCode: referralCode ? referralCode.trim() : '',  
       };
       console.log("Form Data being sent:", JSON.stringify(formData, null, 2));
 
@@ -120,52 +138,54 @@ const Register = ({ navigation,route}) => {
   };
   
 
-  const handleEmailSubmit = async () => {
-    let isValid = true;
+  // const handleEmailSubmit = async () => {
+  //   let isValid = true;
   
-    if (!mobileNumber) {
-      setMobileNumberError("Please enter your mobile number");
-      isValid = false;
-    } else if (mobileNumber.length !== 10) {
-      setMobileNumberError("Mobile number should have 10 digits");
-      isValid = false;
-    } 
+  //   if (!mobileNumber) {
+  //     setMobileNumberError("Please enter your mobile number");
+  //     isValid = false;
+  //   } else if (mobileNumber.length !== 10) {
+  //     setMobileNumberError("Mobile number should have 10 digits");
+  //     isValid = false;
+  //   } 
   
-    if (isValid && !loading) {
-      setLoading(true);
+  //   if (isValid && !loading) {
+  //     setLoading(true);
   
-      const formData = {
-        email: email,
-        name: inputs.name.trim(),
-        phoneNumber: mobileNumber.trim(),
-      };
+  //     const formData = {
+  //       email: email,
+  //       name: inputs.name.trim(),
+  //       phoneNumber: mobileNumber.trim(),
+  //       referralCode: referralCode ? referralCode.trim() : '',  
+
+  //     };
   
-      try {
-        const res = await dispatch(registerEmail(formData));
-        if (res && res.success) {
-          navigation.navigate("Otp", { email: email, region: region });
-        } else if (res && res.success === false && res.message === "NOTPRESENT!") {
-          navigation.navigate("Register", { email: email });
-          handleError(res.message, "email");
-        }
-      } catch (error) {
-        // Using `error.response` to check if there's a 400 status code error
-        if (error.response && error.response.status === 400) {
-          const message = error.response.data.message;  // Use `error.response.data.message` to get the message from the response
-          console.log(message); // Log the error message
+  //     try {
+  //       const res = await dispatch(registerEmail(formData));
+  //       if (res && res.success) {
+  //         navigation.navigate("Otp", { email: email, region: region });
+  //       } else if (res && res.success === false && res.message === "NOTPRESENT!") {
+  //         navigation.navigate("Register", { email: email });
+  //         handleError(res.message, "email");
+  //       }
+  //     } catch (error) {
+  //       // Using `error.response` to check if there's a 400 status code error
+  //       if (error.response && error.response.status === 400) {
+  //         const message = error.response.data.message;  // Use `error.response.data.message` to get the message from the response
+  //         console.log(message); // Log the error message
   
-          if (message === "This credentials already exist!") {
-            setMobileNumberError("Mobile No. already exists");
-            isValid = false;
-          }
-        } else {
-          console.error("Error occurred while registering user:", error);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
+  //         if (message === "This credentials already exist!") {
+  //           setMobileNumberError("Mobile No. already exists");
+  //           isValid = false;
+  //         }
+  //       } else {
+  //         console.error("Error occurred while registering user:", error);
+  //       }
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   }
+  // };
   
   // const handleEmailSubmit = async () => {
   //   console.log("Submit Register");
@@ -219,6 +239,18 @@ const Register = ({ navigation,route}) => {
   //   }
   // };
 
+
+//   let referralCode = null;
+//   try {
+// const userData = await AsyncStorage.getItem("referralCode");
+// if (userData) {
+
+//   referralCode = userData || null;
+// }
+// } catch (error) {
+// console.error("Error retrieving referral code:", error);
+// }
+
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
@@ -251,7 +283,7 @@ const Register = ({ navigation,route}) => {
             </Text>
           </View>
           <View style={{ marginVertical: 20 }}>
-              {region === "IN" && (
+              {/* {region === "IN" && ( */}
                 <>
                   <Input
                 onChangeText={(text) => handleOnchange(text, "name")}
@@ -271,9 +303,9 @@ const Register = ({ navigation,route}) => {
                   
                 </>
                 
-              )}
-            {region === "US" && (
-              <>
+              
+          
+              {/* <>
                  <Input
               onChangeText={(text) => handleOnchange(text, "name")}
               onFocus={() => handleError(null, "name")}
@@ -299,9 +331,9 @@ const Register = ({ navigation,route}) => {
                 <Text style={{ color: "red" }}>{mobileNumberError}</Text>
                 
                 ) : null}
-              </>
+              </> */}
               
-            )}
+           
             <View
               style={{
                 flexDirection: "row",
@@ -333,7 +365,7 @@ const Register = ({ navigation,route}) => {
                 />
               ) : "Register"
             }
-            onPress={region === 'IN' ? handleSubmit : handleEmailSubmit }
+            onPress={ handleSubmit }
             disabled={loading}
           />
         </View>

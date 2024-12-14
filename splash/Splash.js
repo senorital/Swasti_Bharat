@@ -6,7 +6,7 @@ const SplashScreen = ({ navigation }) => {
   useEffect(() => {
     setTimeout(() => {
       navigation.navigate("MainStack");
-    }, 3000);
+    }, 1000);
   }, []);
 
   return (
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
     marginTop: 5,
-    fontFamily: 'PoppinsSemiBold',
+    fontFamily: 'Poppins-SemiBold',
   },
   bottomContainer: {
     position: 'absolute',

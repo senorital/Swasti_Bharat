@@ -1,5 +1,7 @@
 import "react-native-gesture-handler";
 import React, { useState, useEffect } from "react";
+import { Linking } from 'react-native';
+
 import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -28,77 +30,29 @@ import EditQualification from "../roles/instructor/components/qualification/Edit
 import steps  from "../profile/shareAndEarn/steps";
 import Share from "../profile/shareAndEarn/share";
 import ShowInstructorForUser from "../roles/user/components/HomeTutor/ShowHomeTutor";
-// import GeneralQuiz from "../generalQuiz/GeneralQuiz";
-// import Language from "../language/Language";
-// import Wallet from "../wallet/Wallet";
-// import WalletScreen1 from "../wallet/WalletScreen1";
-// import WalletScreen2 from "../wallet/WalletScreen2";
-// import WalletScreen3 from "../wallet/WalletScreen3";
-// import WalletScreen4 from "../wallet/WalletScreen4";
-// import TabNavigator from "../navigation/TabNavigator";
-// import Notification from "../notification/Notification";
-// import CreateCourse from "../createCourse/CreateCourse";
-// import LiveClasses from "../liveClasses/LiveClasses";
-
-// import EditProfile from "../profile/EditProfile";
-// import Qualification from "../qualification/Qualification";
-// import AddQualification from "../qualification/AddQuaification";
-
-// import QualificationDetails from "../qualification/QualificationDetails";
-// import EditQualification from "../qualification/EditQualification";
-
-// import CourseDetails from "../courseDetails/CourseDetails";
-// import YStudioForm from "../yogaStudio/YStudioForm";
-// import YogaStudio from "../yogaStudio/YogaStudio";
-// import Studio from "../studio/Studio";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import EditProfile from "../profile/myprofile/EditProfile";
 import AddQualification from "../roles/instructor/components/qualification/AddQuaification";
 import Qualification from "../roles/instructor/components/qualification/Qualification";
 import Notification from "../roles/instructor/components/notification/Notification";
 import Referral from "../profile/shareAndEarn/referral";
-
-// import YogaStudioScreen from "../yogaStudio/YogaStudioScreen";
-// import EditBusinessProfile from "../businessProfile/EditBusinessProfile";
-// import EditYStudioForm from "../businessProfile/EditYStudioForm";
-// import EditContactDetails from "../businessProfile/EditContactDetails";
-// import EditTiming from "../businessProfile/EditTiming";
-// import BusinessTimings from "../businessTimings/BusinessTimings";
-// import AddBusinessPhoto from "../addBusinessPhoto/AddBusinessPhoto";
-// import AddBusinessContact from "../addBusinessContact/AddBusinessContact";
-// import ParticularStudio from "../particularStudio/ParticularStudio";
-// import AllBusinessStudio from "../allBusinessStudio/AllBusinessStudio";
 import HomeTutor from "../roles/instructor/components/homeTutor/HomeTutor";
 import AddTimeSlot from "../roles/instructor/components/homeTutor/AddTimeSlot";
 import ShowHomeTutor from "../roles/instructor/components/homeTutor/ShowHomeTutor";
 import AllHomeTutor from "../roles/instructor/components/homeTutor/AllHomeTutor";
-// import FirstTherapistScreen from "../therapist/FirstTherapistScreen";
 import AddTLocation from "../roles/instructor/components/tutorLocation/AddTLocation";
 import AddTutorPhoto from "../roles/instructor/components/homeTutor/AddTutorPhoto";
-  import UpdateHomeTutor from "../roles/instructor/components/homeTutor/UpdateHomeTutor";
-  // import Therapist from "../therapist/Therapist";
-  // import AllTherapist from "../therapist/AllTherapist";
-  // import ShowTherapist from "../therapist/ShowTherapist";
-  // import TherapistLocation from "../therapist/TherapistLocation";
-  // import TherapistTimeSlot from "../therapist/TherapistTimeSlot";
-  // import TherapistPhoto from "../therapist/TherapistPhoto";
-  // import AddTherapy from "../therapist/AddTherapy";
-  // import FirstYogaStudioScreen from "../yogaStudio/FirstYogaStudioScreen";
-  // import ComingSoonStudio from "../yogaStudio/ComingSoonStudio";
-  // import ComingSoonTherapist from "../therapist/ComingSoonTherapist";
-  // import ComingSoonInfluencer from "../influencer/ComingSoonInfluencer";
-
- import ConfirmOrder from '../roles/user/components/HomeTutor/confirmOrder';
-  import AadharVerification from "../roles/instructor/components/AadharVerification/AadharVerification";
-  import BankVerification from "../roles/instructor/components/BankVerification/BankVerification";
-  import UpdateBankVerification from "../roles/instructor/components/BankVerification/UpdateBankVerification";
-  import UpdateAadharVerification from "../roles/instructor/components/AadharVerification/UpdateAadharVerification";
-  import Category from "../roles/user/components/category/category";
-  import UpdateTLocation from "../roles/instructor/components/tutorLocation/UpdateTLocation";
-  // import TestStepSecond from "../yogaStudio/TestStepSecond";
-  import Index from '../roles/user/components/HomeTutor/Index';
-  import BookAppointment from '../roles/user/components/HomeTutor/BookAppointment';
-  import Payment from '../roles/user/components/HomeTutor/Payment'
+import UpdateHomeTutor from "../roles/instructor/components/homeTutor/UpdateHomeTutor";
+import ConfirmOrder from '../roles/user/components/HomeTutor/confirmOrder';
+import AadharVerification from "../roles/instructor/components/AadharVerification/AadharVerification";
+import BankVerification from "../roles/instructor/components/BankVerification/BankVerification";
+import UpdateBankVerification from "../roles/instructor/components/BankVerification/UpdateBankVerification";
+import UpdateAadharVerification from "../roles/instructor/components/AadharVerification/UpdateAadharVerification";
+import Category from "../roles/user/components/category/category";
+import UpdateTLocation from "../roles/instructor/components/tutorLocation/UpdateTLocation";
+import Index from '../roles/user/components/HomeTutor/Index';
+import BookAppointment from '../roles/user/components/HomeTutor/BookAppointment';
+import Payment from '../roles/user/components/HomeTutor/Payment'
 import Steps from "../profile/shareAndEarn/steps";
 import EditUserProfile from "../roles/user/components/Profile/EditUserProfile";
 import AddressBook from "../roles/user/components/addressBook/AddressBook";
@@ -107,56 +61,108 @@ import ReviewsPage from "../roles/user/components/Reviews";
 import EditAddress from "../roles/user/components/addressBook/EditAddress";
 import CategoryDetail from "../roles/user/components/category/categoryDetail";
 import Class from "../roles/user/components/classes/myClasses";
-
+import Role from "../auth/roles/Role";
+import HomeTutorBooking from "../roles/instructor/components/booking/HomeTutorBooking";
+import VersionCheck from 'react-native-version-check';
+import VersionCheckModal from "../components/versionCheck/versionCheckModal";
+import { useDispatch } from "react-redux";
+import { getVersion,addUpdateVersion } from "../redux/actions/auth/auth";
+import { store } from "../redux/store/store";
+import HomeTutorSearch from "../roles/user/components/Search/HomeTutorSearch";
+import LocateAddress from "../roles/user/components/addressBook/LocateAddress";
+import UserProfileOverview from "../roles/user/components/Profile/ProfileOverview";
+import UserShare from "../roles/user/components/shareAndEarn/share";
+import Session from "../roles/user/components/classes/sessions";
+import AddTutorPrice from "../roles/instructor/components/homeTutor/AddTutorPrice";
   const Stack = createNativeStackNavigator();
 
   export default function Main() {
     const [isFirstTimeLoad, setIsFirstTimeLoad] = useState(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [role, setRole] = useState(null); // Added role state
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [appVersion, setAppVersion] = useState(null);
+    const dispatch = useDispatch();
+    const [referralCode, setReferralCode] = useState(null);
 
+   
+  
+    
+ 
     useEffect(() => {
-      AsyncStorage.getItem("alreadyLaunched").then((value) => {
-        if (value === null) {
-          AsyncStorage.setItem("alreadyLaunched", "true");
+      const initializeApp = async () => {        
+        // Proceed with alreadyLaunched logic
+        const alreadyLaunched = await AsyncStorage.getItem("alreadyLaunched");
+        console.log("alreadyLaunched :" + alreadyLaunched)
+        if (alreadyLaunched === null) {
+          await AsyncStorage.setItem("alreadyLaunched", "true");
           setIsFirstTimeLoad(true);
+    
         } else {
           setIsFirstTimeLoad(false);
         }
-      });
+      };  
+    
+      initializeApp(); // Wrap initialization in an async function
     }, []);
+
+  
+
+    const addVersion = async () => {
+      const currentVersion = VersionCheck.getCurrentVersion();
+      setAppVersion(currentVersion);
+      
+      try {
+        const formData = { latestVerision : currentVersion };
+        const response = await dispatch(addUpdateVersion(formData));
+        setIsModalVisible(false); // Close modal if shown
+       } catch (error) {
+        console.error("Error in POST API call for version check", error);
+      }
+    };
+  
+    const checkAppVersion = async () => {
+      const currentVersion = VersionCheck.getCurrentVersion();
+      setAppVersion(currentVersion);
+      const playStoreVersion = await VersionCheck.getLatestVersion();
+
+      try {
+        const response = await dispatch(getVersion());
+        if (response?.data?.latestVerision) {
+          const storedVersion = response?.data?.latestVerision;  
+
+        if (storedVersion && storedVersion !== currentVersion || playStoreVersion !== storedVersion) {
+          setIsModalVisible(true); 
+        }} else {
+          setIsModalVisible(true); 
+  
+        }
+      } catch (error) {
+        console.error("Error fetching stored version", error);
+      }
+
+     
+    };
 
     useEffect(() => {
       const fetchData = async () => {
         const loggedInData = await AsyncStorage.getItem("isLoggedIn");
         const userRoleData = await AsyncStorage.getItem("userRole");
-  
-        setIsLoggedIn(loggedInData === "true");
-      setRole(userRoleData === "true" ? "Instructor" : "User"); // Ensure correct role assignment
-    console("userRoleData : "+userRoleData)
-        setLoading(false);
+        setRole(userRoleData);
+        if (loggedInData === 'true') {
+          setIsLoggedIn(true);
+      } else {
+          setIsLoggedIn(false);
+      }
+      
       };
+    
       fetchData();
     }, []);
+    
 
 
-    // async function getData() {
-    //   // await AsyncStorage.removeItem("isLoggedIn");
-    //   // await AsyncStorage.removeItem("role");
-    //   const data = await AsyncStorage.getItem("isLoggedIn");
-    //   const userRole = await AsyncStorage.getItem("userRole"); // Get the user role
 
-    //   setIsLoggedIn(data === "true");
-    //   setRole(userRole === "true" ? "Instructor" : "User"); // Ensure correct role assignment
-    //   console.log("uroleserRole" + userRole)
-    // }
-    // async function getData() {
-    //   const data = await AsyncStorage.getItem("isLoggedIn");
-    //   const userRole = await AsyncStorage.getItem("role");
-
-    //   setIsLoggedIn(data === "true");
-    //   setRole(userRole || "User"); // Set role with default to 'User' if role is not found
-    // } 
 
 
     return (
@@ -173,30 +179,32 @@ import Class from "../roles/user/components/classes/myClasses";
               name="MainStack"
               component={MainStack}
               options={{ headerShown: false }}
-              initialParams={{ isLoggedIn, isFirstTimeLoad,role }} // Pass role
+              initialParams={{ isLoggedIn, isFirstTimeLoad, role }} // Pass role
             />
             </Stack.Navigator>
             <Toast />
           </BottomSheetModalProvider>
         </NavigationContainer>
+        <VersionCheckModal
+        isVisible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        onUpdate={addVersion}  
+      />
       </GestureHandlerRootView>
     );
   }
 
   const MainStack = ({ navigation, route }) => {
-    const { isLoggedIn, isFirstTimeLoad,role } = route.params;
+    const { isLoggedIn, isFirstTimeLoad ,role} = route.params;
       const [loading, setLoading] = useState(true); // Add loading state
-    
+     console.log("Role :" + role)
+
     useEffect(() => {
       if (isFirstTimeLoad === null || isLoggedIn === null) {
         return;
       }
-     console.log("isLoggedIn" + isLoggedIn)
-     console.log("role" + role)
-
-      if (!isLoggedIn && role === null) {
-        navigation.navigate("authStack");
-      }
+     console.log("isLoggedin" + isLoggedIn)
+    
 
       setLoading(false); 
     }, [isLoggedIn, isFirstTimeLoad]);
@@ -204,149 +212,135 @@ import Class from "../roles/user/components/classes/myClasses";
     if (loading) {
       return null;
     }
-
-
+  
 
     return (
       <Stack.Navigator>
-    
-        {isLoggedIn && role ? (
-          console.log('isLoggedIn' + isLoggedIn),
-          console.log("role 12334" + role) ,
+        {isLoggedIn  ? (
+   
+          <Stack.Screen
+          name="appStack"
+          component={AppStack}
+         options={{ headerShown: false }}
+         initialParams={{ role : role }} // Pass role to AppStack
+         />
+
+        ) : 
+         isFirstTimeLoad ? (
+         
           <>
             <Stack.Screen
-              name="appStack"
-              component={AppStack}
+              name="OnBoardingScreen"
+              component={OnBoardingScreen}
               options={{ headerShown: false }}
-              initialParams={{role  : role}} // Pass role to AppStack
-
             />
-        
           </>
         ) : (
+          // Authentication Flow for Unauthenticated Users
           <>
-            {isFirstTimeLoad && (
-              <Stack.Screen
-                name="OnBoardingScreen"
-                component={OnBoardingScreen}
-                options={{ headerShown: false }}
-              />
-            )}
             <Stack.Screen
-              name="authStack"
+              name="AuthStack"
               component={AuthStack}
-              options={{ headerShown: false }}
-            />
-              <Stack.Screen
-              name="appStack"
-              component={AppStack}
               options={{ headerShown: false }}
               initialParams={{ role : role }} // Pass role to AppStack
 
-            />      
-
+            />
+         
           </>
         )}
       </Stack.Navigator>
     );
+    
   };
 
-  const AuthStack = () => {
+
+  
+  const AuthStack = ({route}) => {
+    const { role} = route.params;
+    console.log("AuthStack",role)
+
     return (
       <Stack.Navigator>
-    <>
-        <Stack.Screen
-          name="Login"
-          component={Login}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="DenyLocation"
-          component={DenyLocation}
-          options={{ headerShown: false }}
-        /> 
-        <Stack.Screen
-          name="Otp"
-          component={Otp}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Register"
-          component={Register}
-          options={{ headerShown: false }}
-        />
+        <>
+          {console.log("Rendering Login Screen")}
           <Stack.Screen
-          name="TermConditions"
-          component={TermConditions}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="PrivacyPolicy"
-          component={PrivacyPolicy}
-          options={{ headerShown: false }}
-        /> 
-      
-      </>
-      
+            name="Login"
+            component={Login}
+            options={{ headerShown: false }}
+          />
+  
+          {console.log("Rendering DenyLocation Screen")}
+          <Stack.Screen
+            name="DenyLocation"
+            component={DenyLocation}
+            options={{ headerShown: false }}
+          />
+  
+          {console.log("Rendering Otp Screen")}
+          <Stack.Screen
+            name="Otp"
+            component={Otp}
+            options={{ headerShown: false }}
+          />
+          {/* (role ) */}
+          {console.log("Rendering Role Screen")}
+          <Stack.Screen
+            name="Role"
+            component={Role}
+            options={{ headerShown: false }}
+          />
+  
+          {console.log("Rendering Register Screen")}
+          <Stack.Screen
+            name="Register"
+            component={Register}
+            options={{ headerShown: false }}
+          />
+  
+          {console.log("Rendering TermConditions Screen")}
+          <Stack.Screen
+            name="TermConditions"
+            component={TermConditions}
+            options={{ headerShown: false }}
+          />
+  
+          {console.log("Rendering PrivacyPolicy Screen")}
+          <Stack.Screen
+            name="PrivacyPolicy"
+            component={PrivacyPolicy}
+            options={{ headerShown: false }}
+          />
+            <Stack.Screen
+              name="appStack"
+              component={AppStack}
+              options={{ headerShown: false }}
+              initialParams={{ role : role }} // Pass role to AppStack
+            />
+        </>
       </Stack.Navigator>
     );
   };
-
-
-  const CommonStack = () => {
-    return (
-      <Stack.Navigator>
-    <>
-        <Stack.Screen
-          name="PrivacyPolicy"
-          component={PrivacyPolicy}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="TermConditions"
-          component={TermConditions}
-          options={{ headerShown: false }}
-        /> 
-        <Stack.Screen
-          name="Share"
-          component={Share}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Referral"
-          component={Referral}
-          options={{ headerShown: false }}
-        />
-          <Stack.Screen
-          name="Steps"
-          component={Steps}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Help"
-          component={Help}
-          options={{ headerShown: false }}
-        /> 
-      
-      </>
-      
-      </Stack.Navigator>
-    );
-  };
-
-
+  
   const AppStack = ({ route }) => {
-    const role = route?.params?.role;
-  console.log('role123' + role)
+    const roles = route?.params;
+
+  //  if(roles == "true"){
+    console.log("AppStack rendered with role:", roles);
+
     return (
-      <Stack.Navigator>
-        {role === "Instructor" && (
+      <Stack.Navigator >
+         {roles ? (
           <>
             <Stack.Screen
               name="TabNavigator"
               component={TabNavigator}
               options={{ headerShown: false }}
             />
+             <Stack.Screen
+          name="DenyLocation"
+          component={DenyLocation}
+          options={{ headerShown: false }}
+        /> 
             <Stack.Screen
               name="FirstHTutorScreen"
               component={FirstHTutorScreen}
@@ -460,6 +454,11 @@ import Class from "../roles/user/components/classes/myClasses";
           component={AddTutorPhoto}
           options={{ headerShown: false }}
         />
+          <Stack.Screen
+          name="AddTutorPrice"
+          component={AddTutorPrice}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen
           name="UpdateHomeTutor"
           component={UpdateHomeTutor}
@@ -480,9 +479,13 @@ import Class from "../roles/user/components/classes/myClasses";
           component={AddTimeSlot}
           options={{ headerShown: false }}
         />
-      
-          
-
+  
+  <Stack.Screen
+          name="HomeTutorBooking"
+          component={HomeTutorBooking}
+          options={{ headerShown: false }}
+        />
+  
 <Stack.Screen
           name="Share"
           component={Share}
@@ -504,14 +507,22 @@ import Class from "../roles/user/components/classes/myClasses";
           options={{ headerShown: false }}
         /> 
           </>
-        )}
-        {role === "User" && (
+      //  </Stack.Navigator>   
+    
+         ) : (
           <>
+           
+
             <Stack.Screen
               name="UserTabNavigator"
               component={UserTabNavigator}
               options={{ headerShown: false }}
             />
+             <Stack.Screen
+          name="DenyLocation"
+          component={DenyLocation}
+          options={{ headerShown: false }}
+        /> 
               <Stack.Screen
           name="PrivacyPolicy"
           component={PrivacyPolicy}
@@ -530,6 +541,11 @@ import Class from "../roles/user/components/classes/myClasses";
           <Stack.Screen
             name="Index"
             component={Index}
+            options={{ headerShown: false }}
+          />
+            <Stack.Screen
+            name="HomeTutorSearch"
+            component={HomeTutorSearch}
             options={{ headerShown: false }}
           />
            <Stack.Screen
@@ -559,12 +575,27 @@ import Class from "../roles/user/components/classes/myClasses";
             component={EditUserProfile}
             options={{ headerShown: false }}
           />
+
+         <Stack.Screen
+            name="UserProfileOverview"
+            component={UserProfileOverview}
+            options={{ headerShown: false }}
+          />
           
           <Stack.Screen
             name="AddressBook"
             component={AddressBook}
             options={{ headerShown: false }}
           />
+         
+         <Stack.Screen
+            name="LocateAddress"
+            component={LocateAddress}
+            options={{ headerShown: false }}
+          />
+
+
+
           <Stack.Screen
             name="AddNewAddress"
             component={AddNewAddress}
@@ -596,361 +627,76 @@ import Class from "../roles/user/components/classes/myClasses";
             component={CommonStack}
             options={{ headerShown: false }}
           />
-        </>
-      )}
+
+              
+           <Stack.Screen
+            name="UserShare"
+            component={UserShare}
+            options={{ headerShown: false }}
+          />
+           <Stack.Screen
+            name="Session"
+            component={Session}
+            options={{ headerShown: false }}
+          />
+          </>
+         ) }
+           
     </Stack.Navigator>
-  );
-};
+    
+        
 
-// const AppStack = () => {
-//   return (
-//     <Stack.Navigator>
-//       <Stack.Screen
-//         name="TabNavigator"
-//         component={TabNavigator}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="Terms"
-//         component={Terms}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="Help"
-//         component={Help}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="TermConditions"
-//         component={TermConditions}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="PrivacyPolicy"
-//         component={PrivacyPolicy}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="GeneralQuiz"
-//         component={GeneralQuiz}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="Language"
-//         component={Language}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="Wallet"
-//         component={Wallet}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="WalletScreen1"
-//         component={WalletScreen1}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="WalletScreen2"
-//         component={WalletScreen2}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="WalletScreen3"
-//         component={WalletScreen3}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="WalletScreen4"
-//         component={WalletScreen4}
-//         options={{ headerShown: false }}
-//       />
+    
 
-//       <Stack.Screen
-//         name="Notification"
-//         component={Notification}
-//         options={{ headerShown: false }}
-//       />
+);
+}
 
-//       <Stack.Screen
-//         name="CreateCourse"
-//         component={CreateCourse}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="LiveClasses"
-//         component={LiveClasses}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="MainProfile"
-//         component={MainProfile}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="ProfileOverview"
-//         component={ProfileOverview}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="EditProfile"
-//         component={EditProfile}
-//         options={{ headerShown: false }}
-//       />
-//           <Stack.Screen
-//         name="Steps"
-//         component={steps}
-//         options={{ headerShown: false }}
-//       />
-//          <Stack.Screen
-//         name="Share"
-//         component={Share}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="Qualification"
-//         component={Qualification}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AddQualification"
-//         component={AddQualification}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="QualificationDetails"
-//         component={QualificationDetails}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="EditQualification"
-//         component={EditQualification}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="Experience"
-//         component={Experience}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AddExperience"
-//         component={AddExperience}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="ExperienceDetails"
-//         component={ExperienceDetails}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="EditExperience"
-//         component={EditExperience}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="CourseDetails"
-//         component={CourseDetails}
-//         options={{ headerShown: false }}
-//       />
+    
+  
+  
 
-//       <Stack.Screen
-//         name="YStudioForm"
-//         component={YStudioForm}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="EditYStudioForm"
-//         component={EditYStudioForm}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="EditContactDetails"
-//         component={EditContactDetails}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="EditTiming"
-//         component={EditTiming}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="YogaStudio"
-//         component={YogaStudio}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="Studio"
-//         component={Studio}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="YogaStudioScreen"
-//         component={YogaStudioScreen}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="EditBusinessProfile"
-//         component={EditBusinessProfile}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="BusinessTiming"
-//         component={BusinessTimings}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AddBusinessPhoto"
-//         component={AddBusinessPhoto}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AddBusinessContact"
-//         component={AddBusinessContact}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="ParticularStudio"
-//         component={ParticularStudio}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AllBusinessStudio"
-//         component={AllBusinessStudio}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="HomeTutor"
-//         component={HomeTutor}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AddTimeSlot"
-//         component={AddTimeSlot}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="ShowHomeTutor"
-//         component={ShowHomeTutor}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AllHomeTutor"
-//         component={AllHomeTutor}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="Therapist"
-//         component={Therapist}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="FirstHTutorScreen"
-//         component={FirstHTutorScreen}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AddTLocation"
-//         component={AddTLocation}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AddTutorPhoto"
-//         component={AddTutorPhoto}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="UpdateHomeTutor"
-//         component={UpdateHomeTutor}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="FirstTherapistScreen"
-//         component={FirstTherapistScreen}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AllTherapist"
-//         component={AllTherapist}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="ShowTherapist"
-//         component={ShowTherapist}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="TherapistLocation"
-//         component={TherapistLocation}
-//         options={{ headerShown: false }}
-//       />
 
-//       <Stack.Screen
-//         name="TherapistTimeSlot"
-//         component={TherapistTimeSlot}
-//         options={{ headerShown: false }}
-//       />
+  const CommonStack = () => {
+    return (
+      <Stack.Navigator>
+    <>
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicy}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TermConditions"
+          component={TermConditions}
+          options={{ headerShown: false }}
+        /> 
+        <Stack.Screen
+          name="Share"
+          component={Share}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Referral"
+          component={Referral}
+          options={{ headerShown: false }}
+        />
+          <Stack.Screen
+          name="Steps"
+          component={Steps}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Help"
+          component={Help}
+          options={{ headerShown: false }}
+        /> 
+      
+      </>
+      
+      </Stack.Navigator>
+    );
+  };
 
-//       <Stack.Screen
-//         name="TherapistPhoto"
-//         component={TherapistPhoto}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AddTherapy"
-//         component={AddTherapy}
-//         options={{ headerShown: false }}
-//       />
-//         <Stack.Screen
-//         name="FirstYogaStudioScreen"
-//         component={FirstYogaStudioScreen}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="ComingSoonStudio"
-//         component={ComingSoonStudio}
-//         options={{ headerShown: false }}
-//       />
-//         <Stack.Screen
-//         name="ComingSoonTherapist"
-//         component={ComingSoonTherapist}
-//         options={{ headerShown: false }}
-//       />
-//           <Stack.Screen
-//         name="ComingSoonInfluencer"
-//         component={ComingSoonInfluencer}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="AadharVerification"
-//         component={AadharVerification}
-//         options={{ headerShown: false }}
-//       />
-   
-//      <Stack.Screen
-//         name="BankVerification"
-//         component={BankVerification}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="UpdateBankVerification"
-//         component={UpdateBankVerification}
-//         options={{ headerShown: false }}
-//       />
-//        <Stack.Screen
-//         name="UpdateAadharVerification"
-//         component={UpdateAadharVerification}
-//         options={{ headerShown: false }}
-//       />
-//       <Stack.Screen
-//         name="Referral"
-//         component={Referral}
-//         options={{ headerShown: false }}
-//       />
-//        <Stack.Screen
-//         name="UpdateTLocation"
-//         component={UpdateTLocation}
-//         options={{ headerShown: false }}
-//       />
-//     </Stack.Navigator>
-//   );
-// };
+
+ 
+

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState ,useCallback} from "react";
 import {
   Text,
   View,
@@ -14,14 +14,13 @@ import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import * as DocumentPicker from "expo-document-picker";
 import { SelectList } from "react-native-dropdown-select-list";
 import Header from "../../../../components/header/Header";
 import Input from "../../../../components/input/Input";
 import Button from "../../../../components/button/Button";
 import {
-  getCourseType,
   getInstitute,
   getCourseDurationType,
   getUniversity,
@@ -33,20 +32,15 @@ import { COLORS, icons } from "../../../../components/constants";
 import CustomAlertModal from "../../../../components/CustomAlert/CustomAlertModal";
 import { PDFDocument } from 'pdf-lib';
 import * as FileSystem from 'expo-file-system';
-import { zip } from 'react-native-zip-archive';
 
 const qualificationItem = [
-  // { key: "1", value: "YogaStudio" },
   { key: "1", value: "HomeTutor" },
-  // { key: "3", value: "Therapy" },
 ];
 
 const AddQualification = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertMessage, setAlertMessage] = useState('');
-  const [onAlertOk, setOnAlertOk] = useState(() => () => {});
+
   const [inputs, setInputs] = useState({
       courseType: "",
     course: "",
@@ -67,11 +61,6 @@ const AddQualification = () => {
   const [courseType, setCourseType] = useState([]);
   const [university, setUniversity] = useState([]);
   const [institute, setInstitute] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-
-  const [selectedCourseType, setSelectedCourseType] = useState('');
-  const [durationOptions, setDurationOptions] = useState([]);
-
   const [selectedFormat, setSelectedFormat] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [courseOptions, setCourseOptions] = useState([]);
@@ -79,38 +68,49 @@ const AddQualification = () => {
   const [image, setImage] = useState([]);
   const MAX_FILE_SIZE_MB = 1;
   const ALLOWED_FORMATS = "Image (jpg, png) or pdf";
-  // const courseTypes = useSelector((state) => state.institute.courseType);
   const [boldText, setBoldText] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [showAlert, setShowAlert] = useState(false);
+  const [onAlertOk, setOnAlertOk] = useState(() => {});
+  const checkProfileCompletion = useCallback(async () => {
+    try {
+      const profileRes = await dispatch(getInstructor());
+      const profileComplete = profileRes.data.profileComplete;
+      const qualifications = profileRes.data.data.qualifications;
+      const username = profileRes.data.data.name || "User"; // Assuming username is available in the response
+      const bio = profileRes.data.data.bio; // Assuming username is available in the response
 
-  // const courseDurationType = useSelector(
-  //   (state) => state.institute.courseDurationType
-  // );
-  // console.log(courseDurationType);
+      if (!bio) {
 
-  // const pickImage = async () => {
-  //   try {
-  //     const result = await DocumentPicker.getDocumentAsync({
-  //       type: ["image/*", "application/pdf"],
-  //       multiple: false,
-  //     });
+        setBoldText(username);
+        setAlertMessage(`Please complete your Profile.`);
+        setOnAlertOk(() => () => {
+          setShowAlert(false);
+          navigation.navigate("EditProfile");
+        });
+        setShowAlert(true);
+        return false;
+      } else if (!qualifications.some((q) => q.qualificationIn === "HomeTutor")) {
 
-  //     if (!result.canceled) {
-  //       const file = result.assets[0];
-  //       // console.log(result)
-  //       setSelectedFile({
-  //         uri: file.uri,
-  //         type: file.mimeType || "application/octet-stream",
-  //         name: file.name,
-  //       });
-  //       setImage(result.assets);
-  //     } else {
-  //       console.log("Document picking canceled or failed.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error while picking a document:", error);
-  //   }
-  // };
-  // Configure workerSrc for pdfjs-dist
+        setBoldText(username);
+        setAlertMessage(`Please complete your Qualification.`);
+        setOnAlertOk(() => () => {
+          setShowAlert(false);
+          navigation.navigate("AddQualification");
+        });
+        setShowAlert(true);
+        return false; // Qualification incomplete
+
+      }
+      return true; // Profile and qualifications complete
+
+    } catch (error) {
+      console.error("Error checking profile completion:", error);
+   
+      return false; // Error occurred
+
+    }
+  }, [dispatch, navigation]);
 
   async function formatFileSize(sizeInBytes) {
     const sizeInKB = sizeInBytes / 1024;
@@ -142,34 +142,21 @@ const AddQualification = () => {
   
   const compressPDF = async (fileUri) => {
     try {
-      console.log('Reading PDF file...');
       const existingPdfBytes = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
-      console.log('PDF file read successfully.');
   
-      console.log('Converting Base64 to Uint8Array...');
       const pdfBytes = Uint8Array.from(atob(existingPdfBytes), c => c.charCodeAt(0));
-      console.log('Conversion complete. PDF bytes length:', pdfBytes.length);
   
-      console.log('Loading PDF document with ignoreEncryption option...');
       const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-      console.log('PDF document loaded.');
   
-      console.log('Saving PDF document...');
       const compressedPdfBytes = await pdfDoc.save();
-      console.log('PDF document saved. Compressed bytes length:', compressedPdfBytes.length);
   
       const compressedPdfUri = `${FileSystem.cacheDirectory}compressed.pdf`;
   
-      console.log('Converting compressed PDF bytes to Base64 in chunks...');
       const compressedPdfBase64 = base64EncodeChunked(compressedPdfBytes);
   
-      console.log('Writing compressed PDF to file...');
       await FileSystem.writeAsStringAsync(compressedPdfUri, compressedPdfBase64, { encoding: FileSystem.EncodingType.Base64 });
-      console.log('Compressed PDF written to file:', compressedPdfUri);
   
-      console.log('Getting file info...');
       const compressedFileInfo = await FileSystem.getInfoAsync(compressedPdfUri);
-      console.log('Compressed file info:', compressedFileInfo);
   
       return { uri: compressedPdfUri, size: compressedFileInfo.size };
   
@@ -192,7 +179,6 @@ const AddQualification = () => {
       if (!result.canceled) {
         const file = result.assets[0];
         const formattedFileSize = await formatFileSize(file.size);
-        console.log("File Size: " + formattedFileSize);
   
         const fileType = file.type || file.mimeType || 'application/octet-stream'; // Ensure file type is defined
   
@@ -204,12 +190,10 @@ const AddQualification = () => {
         });
   
         if (fileType === 'application/pdf') {
-          console.log("Compressing PDF...");
   
           try {
             const compressedFile = await compressPDF(file.uri);
             const compressedFileSize = await formatFileSize(compressedFile.size);
-            console.log("Compressed File Size: " + compressedFileSize);
   
             setSelectedFile({
               uri: compressedFile.uri,
@@ -218,14 +202,12 @@ const AddQualification = () => {
               size: compressedFile.size,
             });
           } catch (err) {
-            console.log("Error compressing PDF: ", err);
             setErrors({ document: `Error compressing PDF: ${err.message}` });
           }
         }
           setImage(result.assets);
         
       } else {
-        console.log("Document picking canceled or failed.");
       }
     } catch (error) {
       console.error("Error while picking a document:", error);
@@ -234,7 +216,6 @@ const AddQualification = () => {
       setLoading2(false); // End loading indicator
     }
   };
-  // console.log(selectedFile)
 
   const handleOnchange = (text, input) => {
     setInputs((prevState) => ({ ...prevState, [input]: text }));
@@ -286,10 +267,8 @@ const handleSelectChange = async (val, input) => {
       // Get the selected institute ID
       const selectedInstitute = institute.find(inst => inst.key);
       const selectedInstituteId = selectedInstitute?.key;
-      console.log("selectedInstituteId:", selectedInstituteId);
 
-      // Fetch course duration types based on the selected course type
-      console.log(val);
+      
       const response = await dispatch(getCourseDurationType(selectedInstituteId));
       const courseDurationData = response.data;
 
@@ -298,9 +277,7 @@ const handleSelectChange = async (val, input) => {
       // Filter and set course options based on the selected institute
       const filteredCourses = courseDurationData
         .filter(course => {
-          console.log("Course University ID:", course.universityId); // Log university ID from course response
-          console.log("Filtering based on ID:", selectedInstituteId); // Log selected university ID
-          return course.universityId === selectedInstituteId;
+           return course.universityId === selectedInstituteId;
         })
         .map(course => ({
           key: course.id.toString(),
@@ -321,7 +298,7 @@ const handleSelectChange = async (val, input) => {
 
       if (selectedCourse) {
         setInputs(prevState => ({
-          ...prevState,
+          ...prevState, 
           courseType: selectedCourse.courseType,
           duration: selectedCourse.courseDuration,
         }));
@@ -334,11 +311,7 @@ const handleSelectChange = async (val, input) => {
 
 };
 
-  
-  
-  
-
-
+ 
   
   const format = [
     { key: "1", value: "Percentage(%)" },
@@ -351,11 +324,17 @@ const handleSelectChange = async (val, input) => {
       try {
         setLoading(true);
         const instructorRes = await dispatch(getInstructor());
-        const userName = instructorRes.data.name;
-        const profileComplete = instructorRes.data.profileComplete;
+        const { data } = instructorRes;
+        const userProfile = data?.data || {};
+        const { profilePic, name: userName, bio } = userProfile;
+        const profileComplete = data?.profileComplete;
+
+      
+        // Update UI state based on response
         setBoldText(userName);
 
-        if (!profileComplete) {
+        // Check if bio and profile picture are missing
+        if (!bio || !profilePic) {
           setBoldText(userName);
           setAlertMessage("Please complete your profile.");
           setShowAlert(true);
@@ -394,7 +373,9 @@ const handleSelectChange = async (val, input) => {
     fetchData();
   }, [dispatch]);
 
-
+  // useEffect(() => {
+  //   checkProfileCompletion();
+  // }, []);
 
   useEffect(() => {
     if (university && university.data) {
@@ -423,52 +404,20 @@ const handleSelectChange = async (val, input) => {
         "qualificationIn",
       ];
   
-      // Check if any field is empty
-      fields.forEach((field) => {
-        if (!inputs[field]) {
-          handleError(`Please select/input ${field.replace(/_/g, " ")}`, field);
-          isValid = false;
-          console.log(`Validation failed: ${field} is empty`);
-        }
-      });
+     
   
-      console.log("Selected file:", selectedFile);
-
-    // Check if file is selected and validate
-    if (!selectedFile) {
-      handleError("Please select a document", "document");
-      isValid = false;
-      console.log("Validation failed: No document selected");
-    } else {
-      const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-      console.log("Selected file type:", selectedFile.type);
-      console.log("Selected file size:", selectedFile.size);
-
-      if (!validTypes.includes(selectedFile.type)) {
-        handleError("Invalid file type. Only images and PDFs are allowed.", "document");
-        isValid = false;
-        console.log("Validation failed: Invalid file type");
-      } else if (selectedFile.size > 1024 * 1024) { // 1MB = 1024 * 1024 bytes
-        handleError("File exceeds 1 MB. Please upload an image under 1 MB.", "document");
-        isValid = false;
-        console.log("Validation failed: File size exceeds 1MB");
-      }
-    }
 
       if (inputs.format === "Percentage(%)" && !inputs.percentage) {
         handleError("Please input percentage", "percentage");
         isValid = false;
-        console.log("Validation failed: Percentage format selected but no percentage input");
       }
       if (inputs.format === "CGPA" && !inputs.CGPA) {
         handleError("Please input CGPA", "CGPA");
         isValid = false;
-        console.log("Validation failed: CGPA format selected but no CGPA input");
       }
   
       // If any validation failed, stop further execution
       if (!isValid) {
-        console.log("Form validation failed. Aborting submission.");
         return;
       }
   
@@ -497,23 +446,18 @@ const handleSelectChange = async (val, input) => {
       }
   
      
-        console.log("selectedFile.size :" + selectedFile.uri)
+      if (selectedFile) {
         formData.append("qualificationFile", {
-          uri: selectedFile.uri,
-          type: selectedFile.type,
-          name: selectedFile.name,
-          size : selectedFile.size
+            uri: selectedFile.uri,
+            type: selectedFile.type,
+            name: selectedFile.name,
+            size: selectedFile.size
         });
-      
-
-  
-      // Log FormData for debugging
-      console.log("FormData:", formData);
-      // console.log("FormData:", formData.marks);
-
-      // Submit form data
+    }else {
+ 
+    }
+          // Submit form data
       const res = await dispatch(addQualification(formData));
-      console.log("Response:", res);
   
       if (res.success) {
         setErrors({});
@@ -540,9 +484,8 @@ const handleSelectChange = async (val, input) => {
   useEffect(() => {
     const handleBackPress = () => {
       if (navigation.isFocused()) {
-        // Check if the current screen is focused
-        navigation.goBack(); // Go back if the current screen is focused
-        return true; // Prevent default behavior (exiting the app)
+           navigation.navigate('Home')
+        return true; 
       }
       return false; // If not focused, allow default behavior (exit the app)
     };
@@ -659,52 +602,15 @@ const handleSelectChange = async (val, input) => {
   </Text>
   <Text style={styles.readOnlyText}>   {inputs.duration || "Please select a course first"}</Text>
 </View>
-            {/* <View style={{ marginTop: 10 }}>
-              <Text style={styles.label}>
-                Course Type<Text style={{ color: "red" }}> *</Text>
-              </Text>
-              <SelectList
-              setSelected={(text) =>
-                handleSelectChange(text, "courseType")
-              }
-              data={courseType}
-              defaultOption={inputs.courseType}
-              save="value"
-              fontFamily="Poppins"
-              onFocus={() => handleError(null, "courseType")}
-            />
-          </View>
-          {errors.courseType && (
-            <Text style={styles.errorText}>{errors.courseType}</Text>
-          )}
-         
            
-            <View style={{ marginTop: 10 }}>
-              <Text style={styles.label}>
-                Course Duration <Text style={{ color: "red" }}> *</Text>
-              </Text>
-            <SelectList
-                 setSelected={(val) => handleSelectChange(val, "duration")}
-                 data={durationOptions}
-                 placeholder="Select Duration"
-                fontFamily="Poppins"
-                onFocus={() => handleError(null, "duration")}
-              />
-             
-             {errors.duration && (
-                <Text style={styles.errorText}>
-                  {errors.duration}
-                </Text>
-              )}
-            </View> */}
             <View style={{ marginTop: 15 }}>
             <Input
               onChangeText={(text) =>
                 handleOnchange(text, "certificationNumber")
               }
-              onFocus={() => handleError(null, "certificationNumber")}
-              label="Certification Number"
-              placeholder="Certification Number"
+              onFocus={() => handleError(null, "Roll Number")}
+              label="Roll Number"
+              placeholder="Roll Number"
               error={errors.certificationNumber}
               isRequired={true}
             />
@@ -766,7 +672,7 @@ const handleSelectChange = async (val, input) => {
   )}
             <View style={{ marginTop: 10 }}>
               <Text style={styles.label}>
-                Document Upload<Text style={{ color: "red" }}> *</Text>
+                Document Upload
               </Text>
               <View style={styles.cameraContainer}>
     {loading2 ? (
@@ -811,22 +717,7 @@ const handleSelectChange = async (val, input) => {
   </View>
       </View>
 
-      {/* Loading Modal */}
-      {/* <Modal
-        transparent={true}
-        visible={modalVisible}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-          <Text style={styles.modalText}>Processing...</Text>
-        </View>
-      </Modal> */}
-
-            {errors.document && (
-              <Text style={styles.errorText}>{errors.document}</Text>
-            )}
+    
               <Text style={styles.infoText}>
         Allowed formats: {ALLOWED_FORMATS} {"\n"}
         Max file size: {MAX_FILE_SIZE_MB} MB

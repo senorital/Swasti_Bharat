@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { windowHeight,windowWidth } from '../../../utils/Dimensions';
 
 import { COLORS } from '../../../components/constants';
+import { SCREEN_WIDTH } from '@gorhom/bottom-sheet';
 
 const styles = StyleSheet.create({
   searchBox: {
@@ -79,16 +80,32 @@ const styles = StyleSheet.create({
   textAlign:'center',
   borderRadius:4,
   },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  distanceText: {
+    fontSize: 11,
+    color: 'red',
+    fontFamily:'Poppins',
+    marginLeft: 5, 
+  },
   name: {
    
     fontSize: 13,
     fontFamily : 'Poppins-SemiBold',
     marginBottom : 4,
   },
+  cardtexts :{
+  fontFamily:'Poppins',
+  color:'red',
+  fontSize:10
+  },
   header: {
     flexDirection: 'row',
     // marginTop:12,
-    margin:4
+    margin:8
   },
   tabimage : {
     width: 20,
@@ -162,21 +179,42 @@ const styles = StyleSheet.create({
     },
     titletext :{
     fontFamily:'Poppins',
-    fontSize:15,
+    fontSize:13,
     marginTop:10
     },
 
     webview: {
       flex: 1,
     },
+    white :{
+    backgroundColor:COLORS.white,
+    marginVertical:5,
+    borderRadius:8,
+    padding:10
+    },
     container: {
     marginHorizontal:20,
-    backgroundColor : '#fff'
+    // backgroundColor : '#fff',
+    // borderRadius:8,
+    // margin:2
       },
       rowContainer:{
-        flexDirection: 'row', // This makes the items align horizontally
-        justifyContent: 'space-between',
+        flexDirection: 'row',
+        alignItems: 'center', // Align name and image vertically in the center
+        // justifyContent: 'space-between', // Place the name on the left and the image on the right
+        // marginBottom: 8, // Add spacing between this row and the next component
+       
 
+      },
+      nameText :{
+      // marginTop:10,
+      fontFamily:'Poppins',  
+      fontSize:15,marginLeft:10
+      },
+      profileImage: {
+        width: 90, // Adjust size as needed
+        height: 90,
+        borderRadius: 25,
       },
       descstyle : {
       fontFamily : 'Poppins',
@@ -214,12 +252,17 @@ const styles = StyleSheet.create({
         marginBottom: 5,
         marginLeft : 3
       },
+      seeall:{
+      fontFamily:'Poppins',
+      fontSize:13,
+      color:COLORS.primary
+      },
       text: {
         fontFamily: 'Poppins-SemiBold',
         fontSize: 18,
         color: '#000',
-       
-        justifyContent : 'space-evenly'
+        // marginVertical:10,
+        // justifyContent : 'space-evenly'
       },
       design :{
         fontFamily: 'Poppins-Medium',
@@ -232,7 +275,7 @@ const styles = StyleSheet.create({
         backgroundColor : '#E0E0E0'
       },
       cardtext :{
-        fontSize: 11, color: '#5A5F6C', fontFamily: 'Poppins-Medium', 
+        fontSize: 12, color: '#5A5F6C', fontFamily: 'Poppins-Medium', 
         flexShrink: 1,  maxWidth:'90%'
       },
       iconOutline: {
@@ -288,10 +331,8 @@ const styles = StyleSheet.create({
       },
       content: {
         borderRadius: 20,
-        padding:20,
-        // margin: 12,
-        // marginTop:30
-        paddingTop :20
+        marginHorizontal:20,
+        marginVertical:20,
       },
        topBar: {
         flexDirection: 'row',
@@ -314,10 +355,12 @@ const styles = StyleSheet.create({
         color: '#828282',
         fontFamily: 'Poppins-SemiBold',
         // marginBottom: 2,
+        // marginHorizontal:5
       },
       additionalText: {
         fontSize: 18,
         fontFamily: 'Poppins-Medium',
+        // marginHorizontal:5
       },
       searchBox: {
         flexDirection: 'row',
@@ -340,7 +383,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     filterBox : {
-      borderColor : '#E3E5E5',
+      borderColor : COLORS.grey,
       borderWidth:1,
       marginLeft:12,
       height:windowHeight/2
@@ -352,9 +395,9 @@ const styles = StyleSheet.create({
       alignItems:'center',
       marginTop:5,
       marginLeft:12,
-      borderColor:COLORS.grey,
+      borderColor:COLORS.icon_background,
       borderWidth:1,
-      borderRadius: 10,
+      borderRadius: 8,
   },
   loaderContainer: {
     flex: 1,
@@ -374,22 +417,21 @@ const styles = StyleSheet.create({
   priceCourse : {
     borderColor:'#E3E5E5',
     borderWidth:1,
-    padding:2,
-    margin:4,
+    padding:4,
+    margin:6,
     height:windowHeight/15,
-    width:windowWidth/2.4,
-    borderRadius:10,
+    width:windowWidth/2.7,
+    borderRadius:8,
     justifyContent:'center',
     alignItems:'center'
   },
       input : {
       flexDirection : 'row',
-      borderColor : '#D2D6DB',
+      borderColor : COLORS.icon_background,
       borderWidth:1,
       borderRadius: 10,
       marginTop:5, 
-      padding:8,
-      // width : windowWidth/1.3
+      padding:8,      // width : windowWidth/1.3
       },
       searchIcon: {
         width: 18,
@@ -466,11 +508,11 @@ radioLabel: {
         paddingHorizontal: 15,
         paddingVertical: 10,
         borderRadius: 10,
-        backgroundColor: COLORS.primary,
+        backgroundColor: '#e0e0e0',
         marginRight: 10,
       },
       selectedLanguageTab: {
-        // backgroundColor: '#5F33E1',
+        backgroundColor: COLORS.primary,
       },
       selectedLanguageTabText: {
         color: '#ffffff',
@@ -534,6 +576,29 @@ radioLabel: {
       },
       texts: {
         color:'black', fontFamily: 'Poppins-Medium',fontSize:15,textAlign:'left',marginTop:10
+      },
+      modalOverlay: {
+        flex: 1,
+        // justifyContent: 'center',
+        // alignItems: 'center',
+        // backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      },
+      modalContainer: {
+        // width: SCREEN_WIDTH - 40,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 20,
+      },
+      closeModalButton: {
+        marginTop: 20,
+        padding: 10,
+        backgroundColor: COLORS.primary,
+        borderRadius: 5,
+      },
+      closeModalText: {
+        color: 'white',
+        textAlign: 'center',
+        fontWeight: 'bold',
       },
       smalltext : {
       fontFamily:'Poppins',
@@ -670,7 +735,7 @@ radioLabel: {
       paddingHorizontal: 20, // Increase padding for more width
       borderRadius: 10,
       marginHorizontal: 10, // Adjust spacing between buttons
-      marginBottom: 10, // Adjust spacing between rows if needed
+      marginBottom: 5, // Adjust spacing between rows if needed
       minWidth: 80, // Set a minimum width
       alignItems: 'center', // Center the text horizontally
     },
@@ -680,7 +745,7 @@ radioLabel: {
       fontFamily:'Poppins'
     },
     activeTimeslotButton: {
-      backgroundColor: '#5F33E1', // Example active background color
+      backgroundColor: COLORS.primary, // Example active background color
     },
     activeButtonText: {
       color: '#fff', // Example active text color
@@ -740,16 +805,16 @@ radioLabel: {
       borderWidth: 1,
       borderColor: '#ccc',
       borderRadius: 10,
-      width : windowWidth/1.6,
+      width : windowWidth/2,
       // backgroundColor:'#5F33E1',
       paddingVertical: 10,
-      paddingHorizontal: 15,
+      paddingHorizontal: 10,
       marginTop: 5,
       color:COLORS.black
     },
     datePickerButtonText: {
       fontSize: 14,
-     
+     textAlign:'center',
       // marginRight:12,
       fontFamily:'Poppins'
     },
@@ -777,7 +842,7 @@ radioLabel: {
     },
     vsmalltext : {
       fontFamily:'Poppins-Light',
-      fontSize:13
+      fontSize:12,
     }
   ,  counterContainer: {
     flexDirection: 'row',
@@ -795,11 +860,13 @@ radioLabel: {
   },
   counterButtonText: {
     color: '#fff',
+    fontFamily:'Poppins',
     fontSize: 18,
     fontWeight: 'bold',
   },
   counterText: {
     fontSize: 18,
+    fontFamily:'Poppins',
     fontWeight: 'bold',
     color: '#333',
   },

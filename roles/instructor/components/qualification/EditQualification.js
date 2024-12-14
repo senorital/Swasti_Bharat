@@ -68,43 +68,10 @@ const EditQualification = ({ route, navigation }) => {
   const [image, setImage] = useState([]);
   const [durationOptions, setDurationOptions] = useState([]);
   const courseTypes = useSelector((state) => state.institute.courseType);
-  // const courseDurationType = useSelector((state) => state.institute.courseDurationType);
   const [institute, setInstitute] = useState([]);
 
 
-  // console.log(courseDurationType);
-  // const pickImage = async () => {
-  //   try {
-  //     const result = await DocumentPicker.getDocumentAsync({
-  //       type: ["image/*", "application/pdf"],
-  //       multiple: false,
-  //     });
-
-  //     if (!result.canceled) {
-  //       const file = result.assets[0];
-  //       const fileSizeMB = file.size / (1024 * 1024);
-
-  //       if (fileSizeMB > MAX_FILE_SIZE_MB) {
-  //         setErrors({ document: `File size should be less than ${MAX_FILE_SIZE_MB} MB` });
-  //         setSelectedFile(null);
-  //         Alert.alert("File Size Error", `File size should be less than ${MAX_FILE_SIZE_MB} MB`);
-  //       } else {
-  //         setSelectedFile({
-  //           uri: file.uri,
-  //           type: file.mimeType || "application/octet-stream",
-  //           name: file.name,
-  //         });
-  //         setErrors({}); // Clear previous errors
-  //       }
-  //     } else {
-  //       console.log("Document picking canceled or failed.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error while picking a document:", error);
-  //     setErrors({ document: "Error while picking a document" });
-  //     Alert.alert("Error", "An error occurred while picking the document.");
-  //   }
-  // };
+  
   async function formatFileSize(sizeInBytes) {
     const sizeInKB = sizeInBytes / 1024;
     const sizeInMB = sizeInKB / 1024;
@@ -135,34 +102,17 @@ const EditQualification = ({ route, navigation }) => {
   
   const compressPDF = async (fileUri) => {
     try {
-      console.log('Reading PDF file...');
       const existingPdfBytes = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
-      console.log('PDF file read successfully.');
-  
-      console.log('Converting Base64 to Uint8Array...');
       const pdfBytes = Uint8Array.from(atob(existingPdfBytes), c => c.charCodeAt(0));
-      console.log('Conversion complete. PDF bytes length:', pdfBytes.length);
-  
-      console.log('Loading PDF document with ignoreEncryption option...');
       const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-      console.log('PDF document loaded.');
-  
-      console.log('Saving PDF document...');
       const compressedPdfBytes = await pdfDoc.save();
-      console.log('PDF document saved. Compressed bytes length:', compressedPdfBytes.length);
   
       const compressedPdfUri = `${FileSystem.cacheDirectory}compressed.pdf`;
-  
-      console.log('Converting compressed PDF bytes to Base64 in chunks...');
       const compressedPdfBase64 = base64EncodeChunked(compressedPdfBytes);
   
-      console.log('Writing compressed PDF to file...');
       await FileSystem.writeAsStringAsync(compressedPdfUri, compressedPdfBase64, { encoding: FileSystem.EncodingType.Base64 });
-      console.log('Compressed PDF written to file:', compressedPdfUri);
   
-      console.log('Getting file info...');
       const compressedFileInfo = await FileSystem.getInfoAsync(compressedPdfUri);
-      console.log('Compressed file info:', compressedFileInfo);
   
       return { uri: compressedPdfUri, size: compressedFileInfo.size };
   
@@ -185,7 +135,6 @@ const EditQualification = ({ route, navigation }) => {
       if (!result.canceled) {
         const file = result.assets[0];
         const formattedFileSize = await formatFileSize(file.size);
-        console.log("File Size: " + formattedFileSize);
   
         const fileType = file.type || file.mimeType || 'application/octet-stream'; // Ensure file type is defined
   
@@ -197,12 +146,10 @@ const EditQualification = ({ route, navigation }) => {
         });
   
         if (fileType === 'application/pdf') {
-          console.log("Compressing PDF...");
   
           try {
             const compressedFile = await compressPDF(file.uri);
             const compressedFileSize = await formatFileSize(compressedFile.size);
-            console.log("Compressed File Size: " + compressedFileSize);
   
             setSelectedFile({
               uri: compressedFile.uri,
@@ -211,14 +158,12 @@ const EditQualification = ({ route, navigation }) => {
               size: compressedFile.size,
             });
           } catch (err) {
-            console.log("Error compressing PDF: ", err);
             setErrors({ document: `Error compressing PDF: ${err.message}` });
           }
         }
           setImage(result.assets);
         
       } else {
-        console.log("Document picking canceled or failed.");
       }
     } catch (error) {
       console.error("Error while picking a document:", error);
@@ -228,41 +173,6 @@ const EditQualification = ({ route, navigation }) => {
     }
   };
   
-
-
-  // console.log(selectedFile)
-
-  // const courseData = {
-  //   "Certification Course": [
-  //     "Yoga for Wellness Instructor (CCYWI) [ Duration – 6 months]",
-  //     "Yoga Therapy Assistant (CCYTA) [Duration – one semester]",
-  //     "Yoga for Protocol Instructor (CCYPI) [Duration – 3 months]",
-  //     "Foundation Course [ Duration – 1 month (50hrs)]",
-  //     "Residential and Online Certificate Courses in Yoga [Duration – 200 hrs] (IYA)",
-  //     "Certificate Course in Yoga Science for Special Interest Group (CCYSIG) [Duration – 4 months]",
-  //     "100 Hour Yoga Teacher Training Course Contents",
-  //     "Yoga Nidra Teacher Training [ Duration – 30hrs]",
-  //     "Inner Engineering (Isha Foundation) [ Duration – 25 hrs]",
-  //     "Sadhana Pada [Duration – 7 months] (Isha Foundation)",
-  //     "Hatha Yoga Teacher Training [Duration – 5 months] (Isha Foundation)",
-  //     "Pranayama (Breath work) Teacher Training [ Duration – 50hrs] (Yoga Alliance)",
-  //     "Assistant Yoga Therapist (YCB) [Duration – 400 hrs]",
-  //     "Yoga Therapist (YCB) [Duration – 800 hrs]",
-  //     "Therapeutic Yoga Consultant (YCB) [Duration – 1600 hrs]",
-  //     "Yoga Volunteer (YCB)[Duration – not less than 36 hrs]",
-  //   ],
-  //   "1-Year Courses": [
-  //     "POST GRADUATE DIPLOMA IN YOGA THERAPY FOR MEDICOS AND PARAMEDICOS (PGDYTMP)",
-  //     "Diploma in Yoga Science (D.Y.Sc.) for Graduates",
-  //     "DIPLOMA IN YOGA THERAPY (DYT)",
-  //     "DIPLOMA IN SPORTS COACHING – YOGASANA (D.S.C) For Graduates (One –Year Duration & One Month Internship)",
-  //     "Diploma in Meditation",
-  //   ],
-  //   Graduation: ["Bachelors of Science in Yoga (Graduation) Duration – 3yrs"],
-  //   "Post Graduation": [
-  //     "Master of Science in Yoga (Post – Graduation) Duration -2yrs",
-  //   ],
-  // };
 
   const handleOnchange = (text, input) => {
     setInputs((prevState) => ({ ...prevState, [input]: text }));
@@ -304,13 +214,8 @@ const EditQualification = ({ route, navigation }) => {
   
     if (input === 'institute_collage') {
       try {
-        // Get the selected institute ID
         const selectedInstitute = institute.find(inst => inst.key);
         const selectedInstituteId = selectedInstitute?.key;
-        console.log("selectedInstituteId:", selectedInstituteId);
-  
-        // Fetch course duration types based on the selected course type
-        console.log(val);
         const response = await dispatch(getCourseDurationType(selectedInstituteId));
         const courseDurationData = response.data;
   
@@ -319,9 +224,7 @@ const EditQualification = ({ route, navigation }) => {
         // Filter and set course options based on the selected institute
         const filteredCourses = courseDurationData
           .filter(course => {
-            console.log("Course University ID:", course.universityId); // Log university ID from course response
-            console.log("Filtering based on ID:", selectedInstituteId); // Log selected university ID
-            return course.universityId === selectedInstituteId;
+             return course.universityId === selectedInstituteId;
           })
           .map(course => ({
             key: course.id.toString(),
@@ -360,7 +263,6 @@ const EditQualification = ({ route, navigation }) => {
     { key: "2", value: "CGPA" },
   ];
 
-  // console.log(category);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -436,17 +338,13 @@ const EditQualification = ({ route, navigation }) => {
       } 
      else {
       const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-      console.log("Selected file type:", selectedFile.type);
-      console.log("Selected file size:", selectedFile.size);
-
+     
       if (!validTypes.includes(selectedFile.type)) {
         handleError("Invalid file type. Only images and PDFs are allowed.", "document");
         isValid = false;
-        console.log("Validation failed: Invalid file type");
       } else if (selectedFile.size > 1024 * 1024) { // 1MB = 1024 * 1024 bytes
         handleError("File exceeds 1 MB. Please upload an file under 1 MB.", "document");
         isValid = false;
-        console.log("Validation failed: File size exceeds 1MB");
       }
     }
   
@@ -491,25 +389,15 @@ const EditQualification = ({ route, navigation }) => {
   
       // Append new image if selected, otherwise append existing image
       if (selectedFile) {
-        console.log("Appending selected file:");
-        console.log({
-          uri: selectedFile.uri,
-          type: selectedFile.type,
-          name: selectedFile.name,
-        });
+      
         formData.append("qualificationFile", {
           uri: selectedFile.uri,
           type: selectedFile.type,
           name: selectedFile.name,
         });
       } else if (image.length > 0) {
-        console.log("Appending existing files:");
         image.forEach((file, index) => {
-          console.log(`File ${index}:`, {
-            uri: file.uri,
-            type: file.type,
-            name: file.name,
-          });
+        
           formData.append(`qualificationFile_${index}`, {
             uri: file.uri,
             type: file.type,
@@ -517,43 +405,7 @@ const EditQualification = ({ route, navigation }) => {
           });
         });
       }
-  
-      // Log form data fields
-      console.log("Form Data Fields:");
-      console.log("courseType:", inputs.courseType);
-      console.log("course:", inputs.course);
-      console.log("university_name:", inputs.university_name);
-      console.log("year:", inputs.duration);
-      console.log("certificationNumber:", inputs.certificationNumber);
-      console.log("marksType:", inputs.format);
-      console.log("qualificationIn:", inputs.qualificationIn);
-      if (inputs.format === "Percentage(%)") {
-        console.log("marks:", inputs.percentage);
-      } else if (inputs.format === "CGPA") {
-        console.log("marks:", inputs.CGPA);
-      }
-  
-      // Log the data of qualificationFile
-      if (selectedFile) {
-        console.log("Selected File:");
-        console.log({
-          uri: selectedFile.uri,
-          type: selectedFile.type,
-          name: selectedFile.name,
-        });
-      } else if (image.length > 0) {
-        console.log("Existing Files:");
-        image.forEach((file, index) => {
-          console.log(`File ${index}:`, {
-            uri: file.uri,
-            type: file.type,
-            name: file.name,
-          });
-        });
-      }
-  
       const res = await dispatch(updateQualification(id, formData));
-      console.log(res);
       if (res.success) {
         setErrors({});
         ToastAndroid.show(res.message, ToastAndroid.SHORT);
@@ -591,9 +443,7 @@ const EditQualification = ({ route, navigation }) => {
   }, [navigation]);
 
   const qualificationItem = [
-    // {key:'1', value:'YogaStudio'},
     { key: "1", value: "HomeTutor" },
-    // {key:'3', value:'Therapy'},
   ];
 
   const handleSelectChange1 = (value, fieldName) => {
@@ -658,7 +508,6 @@ const EditQualification = ({ route, navigation }) => {
 
     fetchData();
   }, [dispatch, id]);
-  console.log(inputs.courseType);
 
   return (
     <View style={styles.container}>

@@ -1,23 +1,32 @@
-import React from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  BackHandler,
+  TextInput,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
-import Searchbar from "../../components/Search/Searchbar";
+import { useDispatch } from "react-redux";
 import Header from "../../../../components/header/Header";
-// import { windowWidth } from "../../utils/Dimensions";
 import { COLORS, icons } from "../../../../components/constants";
-import { ScrollView } from "react-native-gesture-handler";
+import { getYogaForCategory } from "../../../../redux/actions/user/authActions";
 
-const CategoryCard = ({ text1, text2, path, navigation, image }) => {
+const CategoryCard = ({ text1, text2, path, navigation, image, style }) => {
   const handlePress = () => {
-    if (path) {
-      navigation.navigate(path);
+    if (text1) {
+      navigation.navigate("CategoryDetail", { category: text1 });
     }
   };
 
   return (
-    <TouchableOpacity onPress={handlePress} style={styles.cardContainer}>
+    <TouchableOpacity onPress={handlePress} style={[styles.cardContainer, style]}>
       <View style={styles.imageContainer}>
-        <Image source={image} style={styles.categoryImage} />
+        <Image source={{ uri: image }} style={styles.categoryImage} />
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.categoryText}>{text1}</Text>
@@ -28,48 +37,108 @@ const CategoryCard = ({ text1, text2, path, navigation, image }) => {
 };
 
 const Category = ({ navigation }) => {
-  // Data for the categories
-  const categories = [
-    { id: '1', text1: 'For Yourself', text2: 'Find your inner peace', image: require('../../../../assets/get-screen/tutor3.jpg'), path: null },
-    { id: '2', text1: 'Yoga for Children ',text2: 'Find your inner peace', image: require('../../../../assets/get-screen/tutor3.jpg'), path: 'Index' },
-    { id: '3', text1: 'Yoga for Pregnancy', text2: 'Every Wednesday', image: require('../../../../assets/get-screen/tutor3.jpg'), path: null },
-    { id: '4', text1: 'Gentle Yoga', text2: 'Every Thursday', image: require('../../../../assets/get-screen/tutor3.jpg'), path: 'Index' },
-    // Add more categories as needed
-  ];
+  const [yogaCategories, setYogaCategories] = useState([]);
+  const [filteredCategories, setFilteredCategories] = useState([]);
+  const [searchText, setSearchText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
 
-  // Render each category card
-  const renderCategory = ({ item }) => (
-    <CategoryCard 
-      text1={item.text1} 
-      text2={item.text2} 
-      image={item.image} 
-      path={item.path} 
-      navigation={navigation} 
-    />
-  );
+  const fetchYogaCategories = async () => {
+    setLoading(true);
+    try {
+      const response = await dispatch(getYogaForCategory());
+      setYogaCategories(response.data); // Assuming response.data contains the categories
+      setFilteredCategories(response.data); // Set filtered data initially to the full data
+    } catch (err) {
+      setError(err.message || "Failed to fetch categories");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchYogaCategories();
+  }, []);
+
+  const handleSearch = (text) => {
+    setSearchText(text);
+
+    if (text.trim() === "") {
+      setFilteredCategories(yogaCategories); // Reset to full list when search is empty
+    } else {
+      const filtered = yogaCategories.filter((item) =>
+        item.yogaFor.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredCategories(filtered);
+    }
+  };
+
+  const renderCategory = ({ item, index }) => {
+    const isEvenCard = (index + 1) % 2 === 0;
+
+    return (
+      <CategoryCard
+        text1={item.yogaFor}
+        text2={item.description}
+        image={item.path}
+        path={item.path}
+        navigation={navigation}
+        style={isEvenCard ? { marginLeft: 14 } : null}
+      />
+    );
+  };
+
+  useEffect(() => {
+    const handleBackPress = () => {
+      if (navigation.isFocused()) {
+        navigation.goBack();
+        return true;
+      }
+      return false;
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", handleBackPress);
+
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", handleBackPress);
+    };
+  }, [navigation]);
 
   return (
-    <View style={{flex:1}}>
-      <StatusBar style="dark" backgroundColor="#d6d5ff" />
-      <View style={{paddingTop:20}}>     
-     <Header title="Explore Categories" icon={icons.back} />
+    <View style={{ flex: 1 }}>
+      <StatusBar style="dark" backgroundColor={COLORS.user_front_theme_color} />
+      <View style={{ paddingTop: 20 }}>
+        <Header title="Explore Categories" icon={icons.back} />
       </View>
-
       <View style={styles.container}>
-      <Searchbar />
-
-
-      <FlatList
-        data={categories}
-        renderItem={renderCategory}
-        keyExtractor={item => item.id}
-        numColumns={2}  // Display two cards per row
-        contentContainerStyle={styles.flatListContent}
-        columnWrapperStyle={styles.categoryRow}  // Style for each row
-      />
+        {/* Search Bar */}
+        <TextInput
+          placeholder="Search Categories"
+          style={styles.searchInput}
+          value={searchText}
+          onChangeText={handleSearch}
+        />
+        {loading ? (
+          <ActivityIndicator size="large" color={COLORS.primary} style={{ flex: 1 }} />
+        ) : error ? (
+          <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
+        ) : (
+          <FlatList
+            data={filteredCategories}
+            renderItem={renderCategory}
+            keyExtractor={(item) => item.id.toString()}
+            numColumns={2}
+            contentContainerStyle={styles.flatListContent}
+            columnWrapperStyle={{
+              justifyContent: "space-between",
+            }}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+          />
+        )}
+      </View>
     </View>
-    </View>
-
   );
 };
 
@@ -81,39 +150,42 @@ const styles = StyleSheet.create({
   flatListContent: {
     paddingVertical: 10,
   },
-  categoryRow: {
-    justifyContent: 'space-between',
-    marginVertical: 10,
+  searchInput: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 16,
+    fontFamily:'Poppins',
+    marginBottom: 10,
   },
   cardContainer: {
     flex: 1,
     borderRadius: 10,
     backgroundColor: COLORS.white,
-    marginHorizontal: 5,  // Margins between columns
-    overflow: 'hidden',   // Ensure the content doesn't overflow the card
+    marginVertical: 10,
   },
   imageContainer: {
-    width: '100%',
+    width: "100%",
     height: 100,
   },
   categoryImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
   },
   textContainer: {
-    padding: 10,
+    padding: 8,
   },
   categoryText: {
     fontSize: 13,
-    fontFamily: 'Poppins',
+    fontFamily: "Poppins",
     marginHorizontal: 5,
   },
   smallText: {
     fontSize: 10,
-    color: 'grey',
-    fontFamily: 'Poppins',
+    color: "grey",
+    fontFamily: "Poppins",
     marginHorizontal: 5,
   },
 });

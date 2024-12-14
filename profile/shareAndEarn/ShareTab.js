@@ -45,7 +45,7 @@ export default function ShareTab({
       >
         <Text
           style={{
-            fontFamily: "PoppinsSemiBold",
+            fontFamily: "Poppins-SemiBold",
             fontSize: wp("4%"),
             color: getSelectionMode == 1 ? COLORS.primary : "grey",
           }}
@@ -69,7 +69,7 @@ export default function ShareTab({
       >
         <Text
           style={{
-            fontFamily: "PoppinsSemiBold",
+            fontFamily: "Poppins-SemiBold",
             fontSize: wp("3.5%"),
             color: getSelectionMode == 2 ? COLORS.primary : "grey",
           }}
@@ -93,7 +93,7 @@ export default function ShareTab({
       >
         <Text
           style={{
-            fontFamily: "PoppinsSemiBold",
+            fontFamily: "Poppins-SemiBold",
             fontSize: wp("3.5%"),
             color: getSelectionMode == 3 ? COLORS.primary : "grey",
           }}

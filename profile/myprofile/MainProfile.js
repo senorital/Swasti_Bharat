@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect,useState } from "react";
 import {
   Text,
   View,
@@ -7,7 +7,8 @@ import {
   Image,
   ScrollView,
   StatusBar,
-  BackHandler
+  BackHandler,
+  ToastAndroid
 } from "react-native";
 import { Avatar } from "react-native-elements";
 import Toast from "react-native-toast-message";
@@ -18,34 +19,57 @@ import Border from "../../components/border/BorderRadius";
 import { COLORS, icons } from "../../components/constants";
 import { FONTS } from "../../components/constants/theme";
 import { useFocusEffect } from '@react-navigation/native';
+import NetInfo from "@react-native-community/netinfo";
 
 const MainProfile = ({ navigation }) => {
   const dispatch=useDispatch();
-  const user =useSelector((state)=>state.auth.user);
+  // const user =useSelector((state)=>state.auth.user);
+  const [user, setUser] = useState(null);
+  const [isMounted, setIsMounted] = useState(true);
+  const [isConnected, setIsConnected] = useState(true); // State to hold network status
+
+  useEffect(() => {
+    // Check for network connectivity
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsConnected(state.isConnected); // Update network status
+      if (!state.isConnected) {
+        // Toast.show({
+        //   type: "error",
+        //   text1: "No internet connection",
+        //   visibilityTime: 3000,
+        //   autoHide: true,
+        // });
+        ToastAndroid.show("No internet connection",ToastAndroid.SHORT);
+      }
+    });
+
+    return () => {
+      unsubscribe(); // Clean up listener on unmount
+    };
+  }, []);
+
+
   const fetchData = async () => {
-    try {
-    const res=  await dispatch(getInstructor());
-    console.log(res);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      const msg=error.response?.data.message
-      Toast.show({
-        type: "error",
-        text1: msg || "An error occurred. Please try again.",
-        visibilityTime: 2000,
-        autoHide: true,
-      });
+    if (isConnected) {
+      try {
+        const res = await dispatch(getInstructor());
+        setUser(res?.data);
+        console.log("res.data :", res?.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    } else {
+     
+      ToastAndroid.show("You are offline", ToastAndroid.SHORT)
     }
   };
-  useEffect(() => {
 
-    fetchData();
-  }, [dispatch]);
+
   
   useFocusEffect(
     React.useCallback(() => {
       fetchData();
-    }, [])
+    }, [isConnected]) // Only re-fetch data when network status changes
   );
   useEffect(() => {
     const handleBackPress = () => {
@@ -65,12 +89,11 @@ const MainProfile = ({ navigation }) => {
   }, [navigation]);
 
 
-  const imageUrl = user && user.data.profilePic && user.data.profilePic.path
-  ? { uri: user.data.profilePic.path }
+  const imageUrl = user && user?.data?.profilePic && user?.data?.profilePic.path
+  ? { uri: user?.data?.profilePic.path }
   : require("../../assets/dAvatar.jpg");
 
 
-console.log(user?.profilePic?.path);
 
   return (
     <View style={styles.container}>
@@ -86,10 +109,10 @@ console.log(user?.profilePic?.path);
               <View style={styles.profileTextContainer}>
 
                 <Text style={styles.profileName}>
-                  {user && <>{user.data?.name}</>}
+                  {user && <>{user?.data?.name}</>}
                 </Text>
                 <Text style={styles.profileEmail}>
-                  {user && <>{user.data?.email}</>}
+                  {user && <>{user?.data?.email}</>}
                 </Text>
               </View>
             </View>      

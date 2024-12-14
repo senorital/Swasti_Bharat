@@ -1,7 +1,11 @@
 import React, { useState } from "react";
-import { View, TextInput, Image,StyleSheet, TouchableOpacity, ScrollView, Text } from "react-native";
+import { View, TextInput, Image,StyleSheet, TouchableOpacity, ScrollView, Text,Dimensions } from "react-native";
 import { useNavigation } from '@react-navigation/native';
-
+import { SCREEN_WIDTH } from "@gorhom/bottom-sheet";
+export const SLIDER_WIDTH = Dimensions.get("window").width;
+export const ITEM_WIDTH = Math.round(SLIDER_WIDTH * 0.9);
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../../../components/constants";
 const Searchbar = ({ categories }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredCategories, setFilteredCategories] = useState([]);
@@ -36,18 +40,37 @@ const Searchbar = ({ categories }) => {
 
   return (
     <View style={styles.searchBox}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Image
-          source={require('../../../../assets/icons/search.png')}
-          style={styles.searchIcon}
-        />
-        <TextInput
-          placeholder="Search"
-          value={searchQuery}
-          onChangeText={handleSearchChange}
-          style={styles.searchInput}
-        />
-      </View>
+     <View
+  style={{
+    flexDirection: 'row',
+    alignItems: 'center', // Align items vertically in the center
+    justifyContent: 'space-between', // Adjust spacing if needed
+      paddingHorizontal: 5, // Add padding around the items
+    // height: 30, // Ensures consistent height for alignment
+  }}
+>
+  {/* <Image
+    source={require('../../../../assets/icons/search.png')}
+    style={{
+      width: 18, // Adjust the size of the icon
+      height: 18,
+      marginRight: 10, // Add space between the icon and TextInput
+      marginBottom:2
+    }}
+  /> */}
+    <Ionicons name="search" size={20} color="grey" style={styles.icon}/>
+  <TextInput
+    placeholder="Search"
+    value={searchQuery}
+    onChangeText={handleSearchChange}
+    style={{
+      flex: 1, // Allows TextInput to take available space
+      fontSize: 15, // Adjust font size
+      fontFamily:'Poppins'
+    }}
+    selectionColor={COLORS.primary}
+  />
+</View>
 
       {/* Display filtered category list using ScrollView */}
       {filteredCategories.length > 0 && (
@@ -55,7 +78,7 @@ const Searchbar = ({ categories }) => {
           <ScrollView>
             {filteredCategories.map((item) => (
               <TouchableOpacity key={item.id} onPress={() => handleCategorySelect(item)}>
-                <Text style={styles.categoryItem}>{item.yogaFor}</Text>
+                <Text style={[styles.categoryItem,{textAlign:'left'}]}>{item.yogaFor}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -70,8 +93,15 @@ const Searchbar = ({ categories }) => {
 
 
 export const styles = StyleSheet.create({
-  searchBox: {
-    padding: 10,
+  icon :{
+  marginRight:8,
+  marginBottom:2
+  },
+    searchBox: {
+    width: ITEM_WIDTH,
+    padding: 8,
+    borderColor:COLORS.icon_background,
+    borderWidth:1,
     backgroundColor: '#fff',
     borderRadius: 10,
     // shadowColor: '#000',
@@ -79,44 +109,38 @@ export const styles = StyleSheet.create({
     // shadowOpacity: 0.2,
     // shadowRadius: 5,
     // elevation: 5,
-    marginVertical: 10,
+    marginVertical: 5,
+    // alignContent:'center',
+    // alignItems:'center'
   },
   searchIcon: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
+    justifyContent:'center',
+    alignItems:'center',
     marginRight: 10,
-    tintColor: '#666',
+    // tintColor: '#666',
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     fontFamily:'Poppins'
-    // paddingVertical: 10,
-    // paddingHorizontal: 15,
-    // borderColor: '#ccc',
-    // borderWidth: 1,
-    // borderRadius: 8,
-    // backgroundColor: '#f5f5f5',
-    // color: '#333',
-    // elevation: 1,
-    // shadowColor: '#000',
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.2,
-    // shadowRadius: 5,
+  
   },
   dropdownContainer: {
     backgroundColor: '#fff',
     borderRadius: 10,
     marginTop: 5,
-    maxHeight: 100,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    paddingHorizontal: 5,
+    maxHeight: 50,
+    // borderWidth: 1,
+    // borderColor: '#ccc',
+    // paddingHorizontal: 5,
   },
   categoryItem: {
     paddingVertical: 10,
     paddingHorizontal: 10,
     fontSize: 14,
+    textAlign:'auto',
     fontFamily:'Poppins',
     color: '#333',
     borderBottomWidth: 1,
@@ -126,7 +150,6 @@ export const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     color: '#888',
-    textAlign: 'center',
   },
 });
 

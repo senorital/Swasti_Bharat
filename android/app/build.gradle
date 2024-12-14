@@ -111,11 +111,14 @@ android {
 
     namespace 'com.bharatswasti'
     defaultConfig {
+        
         applicationId 'com.bharatswasti'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.0.0"
+        versionCode 19
+        versionName "1.0.7"
+        multiDexEnabled true
+
     }
     signingConfigs {
         debug {
@@ -124,19 +127,22 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+          release {
+            storeFile file("C:/work/@morarji198__Swasti_Bharat.jks")
+            storePassword "3bb5581601e390b7da72e4b17603df12"
+            keyAlias "ec7007659450256f59cb6e50f37eab76"
+            keyPassword "7115caa4bf3c27826f7b33820cf80a68"
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+          
+            signingConfig signingConfigs.release
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
-            minifyEnabled enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
+            minifyEnabled false
         }
     }
     packagingOptions {
@@ -171,6 +177,10 @@ dependencies {
     implementation("com.facebook.react:react-android")
     implementation project(':react-native-compressor')
     implementation project(':react-native-sms-retriever')
+    // implementation 'com.android.installreferrer:installreferrer:2.2'
+    // implementation 'com.android.billingclient:billing:6.0.1'
+    implementation 'com.android.installreferrer:installreferrer:2.2'
+    // implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.6.1' // or the latest stable version
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";

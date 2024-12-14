@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Image, BackHandler,TouchableOpacity, ActivityIndicator, Dimensions, useWindowDimensions } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Image, BackHandler,TouchableOpacity,Pressable, ActivityIndicator, Dimensions, useWindowDimensions } from 'react-native';
 import { Avatar } from "react-native-elements";
 import { windowHeight, windowWidth } from '../../../utils/Dimensions';
 import { styles } from '../components/style';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons,FontAwesome5, Octicons } from '@expo/vector-icons';
 import * as Location from "expo-location";
 import ImageSlider from '../components/imageSlider/ImageSlider';
 import { Feather } from '@expo/vector-icons';
@@ -19,8 +19,15 @@ import { getInstructor } from '../../../redux/actions/auth/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomAlertModal from "../../../components/CustomAlert/CustomAlert";
 import Class from '../components/classes/myClasses';
+import defaultImage from '../../../assets/batch.png';
+import { SCREEN_HEIGHT, SCREEN_WIDTH } from '@gorhom/bottom-sheet';
+import CategoryDetail from '../components/category/categoryDetail';
+import DenyLocation from '../../../auth/login/DenyLocation';
+import { setLocationAddress,clearLocationAddress } from '../../../redux/actions/instructor/locationActions/locationActions';
+import LocationModal from '../components/LocationModal';
 
-const YogaCard = ({ text1, text2, image, navigation,path,category })=> {
+
+const YogaCard = ({ text1, text2, image, navigation,path,category,marginHorizontal })=> {
   const handlePress = () => {
     if (path) {
       navigation.navigate(path);
@@ -31,13 +38,13 @@ const YogaCard = ({ text1, text2, image, navigation,path,category })=> {
   };
 // console.log("image :" + image)
   return (
-    <TouchableOpacity onPress={handlePress} style={[stylesc.cardContainer,{marginHorizontal:5}]}>
+    <TouchableOpacity onPress={handlePress} style={[stylesc.cardContainer,{marginHorizontal}]}>
     <View style={[stylesc.imageContainer]}>
     <Image source={image} style={stylesc.categoryImage} />
     </View>
-    <View style={{padding:10}}>
+    <View style={{marginLeft:10}}>
     <Text style={[stylesc.categoryText]}>{text1}</Text>
-    <Text style={[stylesc.smalltext]}>{text2}</Text>
+    <Text style={[stylesc.smalltext]}  numberOfLines={1}  ellipsizeMode="tail">{text2}</Text>
     </View>
   </TouchableOpacity>
   );
@@ -87,17 +94,17 @@ const YogaCard = ({ text1, text2, image, navigation,path,category })=> {
 //     </>
 //   );
 // };
-const Card = ({ image, title, description, onPress }) => {
+const Card = ({ image, path, text1, text2, description, onPress,marginHorizontal ,navigation}) => {
   return (
-    <TouchableOpacity onPress={onPress}>
-      <View style={[styles.card, { marginHorizontal: 0 }]}>
+    <TouchableOpacity  onPress={() => navigation.navigate(path, { classType: text1 })} >
+      <View style={[stylesc.card, { marginHorizontal }]}>
         <Image 
           source={image} 
-          style={styles.cardImage} 
+          style={stylesc.categoryImage} 
         />
         <View style={{ padding: 10 }}>
-          <Text style={styles.cardText}>{title}</Text>
-          <Text style={styles.smalltext}>{description}</Text>
+          <Text style={stylesc.cardText}>{text1}</Text>
+          {/* <Text style={styles.smalltext}>{description}</Text> */}
         </View>
       </View>
     </TouchableOpacity>
@@ -116,7 +123,11 @@ const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const [authToken, setAuthToken] = useState(null);
   const [yogaCategoriesData, setYogaCategoriesData] = useState([]); // State to hold yoga categories
+  const address_loc = useSelector((state) => state.location.address);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState('');
 
+  console.log("address :" + address_loc)
 
   const userRole = useSelector((state) => state.auth.user);
   const yogaCategories = useSelector((state) => state.auth.yogaForCategory);
@@ -130,6 +141,7 @@ const HomeScreen = ({ navigation }) => {
     setLoading(true);
     setErrorMsg(null);
     setAddress(null);
+  
     try {
       // Request location permissions
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -138,31 +150,44 @@ const HomeScreen = ({ navigation }) => {
         setLoading(false);
         return;
       }
-
-   
   
       // Get the current location
       let location = await Location.getCurrentPositionAsync({});
-      // console.log("Location:", location); // Log the entire location object
-      // console.log("Latitude:", location.coords.latitude); // Log the latitude
-      // console.log("Longitude:", location.coords.longitude); // Log the longitude
+      const { latitude, longitude } = location.coords;
+  
       setLocation(location);
   
       // Reverse geocode the location to get the address
-      let geocode = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-      // console.log("Geocode:", geocode); // Log the geocode result
-      setAddress(geocode[0]);
-      
+      let geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+  
+      if (geocode.length > 0) {
+        const formattedAddress = geocode[0].formattedAddress;
+        setAddress(formattedAddress);
+  
+        // Dispatch the location to Redux store
+        dispatch(
+          setLocationAddress({
+            address: formattedAddress,
+            latitude,
+            longitude,
+          })
+        );
+      } else {
+        setErrorMsg("Unable to fetch address");
+      }
     } catch (error) {
-      setErrorMsg("Error fetching location");
-      console.error(error); // Log the error
+      console.error("Error:", error.message);
+      setErrorMsg(
+        error.message ===
+          "Location request failed due to unsatisfied device settings"
+          ? "Please enable location services in device settings"
+          : "Error fetching location"
+      );
     } finally {
       setLoading(false);
     }
   };
+  
   
   const fetchData = async () => {
     try {
@@ -175,7 +200,7 @@ const HomeScreen = ({ navigation }) => {
   
       // Fetch yoga category data
       const yogaRes = await dispatch(getYogaForCategory());
-      console.log("Yoga Category: " + JSON.stringify(yogaRes.data));
+      // console.log("Yoga Category: " + JSON.stringify(yogaRes.data));
       setYogaCategoriesData(yogaRes.data);
 
     } catch (error) {
@@ -252,11 +277,21 @@ const HomeScreen = ({ navigation }) => {
   };
 
  
+  const handleSelectAddress = (addresss) => {
+    setSelectedAddress(addresss); // Update the selected address state
+    console.log('Selected Address:', addresss); // Log the selected address
+    // navigation.navigate('Payment'); // Change 'Payment' to the actual route name if it's different
+    // setIsAddressSelected(true); // Update state when address is selected
 
-  const toggleModal = () => {
-    setModalVisible(!isModalVisible);
   };
 
+  const handleIconPress = () => {
+    setShowLocationModal(true); // Show the LocationModal
+  };
+
+  const closeModal = () => {
+    setShowLocationModal(false); // Close the LocationModal
+  };
 
   const imageUrl = userRole && userRole.profilePic && userRole.profilePic.path
   ? { uri: userRole.profilePic.path }
@@ -265,17 +300,19 @@ const HomeScreen = ({ navigation }) => {
 console.log(userRole?.profilePic?.path);
 
   return (
-    <ScrollView style={{marginTop:30}} >
-      <StatusBar style="light" backgroundColor={COLORS.user_front_theme_color} />
+    <ScrollView style={{backgroundColor:'#fff'}} showsVerticalScrollIndicator={false} >
+      <StatusBar style="dark" backgroundColor={COLORS.user_front_theme_color} />
+      <View style={{paddingTop:30}}></View>
         <View style={stylesc.redContainer} />
     
       <View style={styles.content}>
       
 
         <View style={styles.topBar}>
-          <Text>
+          <View style={{flexDirection:'column'}}>
+          <Text style={{}}>
         {userRole && (
-            <Text style={{ fontFamily: "Poppins-SemiBold",fontSize:20 }}>
+            <Text style={{ fontFamily: "Poppins-SemiBold",fontSize:20}}>
             {/* { console.log("user.data.name :" + user.name)} */}
             Hi,&nbsp;
             
@@ -286,18 +323,7 @@ console.log(userRole?.profilePic?.path);
          )}
           &nbsp;
        </Text>    
-           
-       <TouchableOpacity onPress={() => navigation.navigate('MainProfile')}>
-       <Avatar
-    rounded
-    source={imageUrl}
-    containerStyle={{ borderColor: 'white', borderWidth: 2 }}
-    size={50}
-  />
-   </TouchableOpacity>
-        </View>
-
-        {loading ? (
+       {loading ? (
           <View>
             <ActivityIndicator size="small" color="#0000ff" />
           </View>
@@ -309,36 +335,50 @@ console.log(userRole?.profilePic?.path);
             </TouchableOpacity>
           </View>
         ) : address ? (
-          <View style={{ flexDirection: 'row', marginTop: -10 }}>
-            <Text style={[styles.greetingText, { color: '#000', fontSize: 12, marginRight: 5, fontFamily: 'Poppins' }]}>
-              {address.name ? address.name + ", " : ""}
-              {address.street ? address.street + ", " : ""}
-              {address.city ? address.city + ", " : ""}
-              {address.region ? address.region + ", " : ""}
-              {address.postalCode ? address.postalCode : ""}
-            </Text>
-            <AntDesign name="caretdown" size={13} color="black" onPress={toggleModal} /> 
-          </View>
-        ) : null}
-        <Text style={[styles.additionalText, { color: '#210d68', marginTop: 15 }]}>Find the best Yoga Instructors and Trainers</Text>
+         
+             <TouchableOpacity onPress={handleIconPress}>
+               <View style={{ width:'80%',flexDirection:'row'  }}>
+               <Text style={[styles.greetingText, { color: '#000', fontSize: 12, fontFamily: 'Poppins' }]} numberOfLines={1} ellipsizeMode="tail">
+               {selectedAddress ? selectedAddress : (address ? address + ", " : "")}
+                </Text>
+            <Octicons name="triangle-down" size={18} color="black" />
+            </View>
+            </TouchableOpacity>
+           
+        ) : null}  
+        </View>
+       <TouchableOpacity onPress={() => navigation.navigate('MainProfile')}>
+       <Avatar
+    rounded
+    source={imageUrl}
+    containerStyle={{ borderColor: 'white', borderWidth: 2 }}
+    size={50}
+  />
+   </TouchableOpacity>
+        </View>
+
+       
+        <Text style={[styles.additionalText, { color: '#210d68', marginTop: 10 }]}>Find the best Yoga Instructors and Trainers</Text>
+         <View style={{alignItems:'center',justifyContent:'center'}}>      
         <Searchbar categories={yogaCategoriesData} />
+        </View> 
         </View>
       
       <View style={stylesc.container}>
       <ImageSlider />
     
-     <View style={{ flexDirection: 'row'}}>
-            <YogaCard 
+     <View style={{ flexDirection: 'row',marginTop:20}}>
+            <Card 
               text1="Morning Classes" 
               marginHorizontal={0}
               image={require('../../../assets/get-screen/tutor3.jpg')} 
               navigation={navigation} 
               // text2 = "4:00-10:00 AM"
-              path = {"Class"}
+              path="Session"
             />
-            <YogaCard 
+            <Card 
               text1="Evening Classes" 
-              path={"Class"}   
+              path="Session"  
               marginHorizontal={10}            
               image={require('../../../assets/get-screen/tutor3.jpg')} 
               navigation={navigation} 
@@ -348,8 +388,15 @@ console.log(userRole?.profilePic?.path);
           </View>
       
          
- 
-        <Text style={[styles.text, { fontFamily: 'Poppins-Medium',marginTop:10,marginBottom:10 }]}>Explore Categories</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 10 }}>
+      <Text style={[styles.text, { fontFamily: 'Poppins-Medium' }]}>
+        Explore Categories
+      </Text>
+      <Pressable onPress={() => navigation.navigate('Category')} style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={styles.seeall}>see all</Text>
+        <FontAwesome5 name="angle-right" size={14} color={COLORS.primary} style={{ marginLeft: 5 }} />
+      </Pressable>
+    </View>
         <View style={{flexDirection:'row'}}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>    
             {yogaCategoriesData.map((category, index) => (
@@ -357,15 +404,25 @@ console.log(userRole?.profilePic?.path);
                 key={index} // Unique key for each card
                 text1={category.yogaFor} // Pass category name as text1
                 text2={category.description || 'Every Day'} // Pass description or fallback text
-                image={{ uri: category.path }} // Pass image URI
+                image={{
+                  uri: Image.resolveAssetSource(defaultImage).uri,
+                }}               
                 navigation={navigation} // Pass navigation prop for handling navigation
-                path = {"CategoryDetail"}
+                path = {CategoryDetail}
+                marginHorizontal={index === 0 ? 0 : 10} // Conditional margin
                 category={category.yogaFor}
               />
             ))}
             </ScrollView>
          
           </View>
+          {showLocationModal && (
+        <LocationModal
+          visible={showLocationModal}
+          toggleModal={closeModal}
+          onSelectAddress={handleSelectAddress}
+        />
+      )}
         </View>
         <CustomAlertModal
         visible={isModalVisible}
@@ -407,9 +464,9 @@ const stylesc = StyleSheet.create({
   redContainer: {
     backgroundColor: COLORS.user_front_theme_color,
     width: windowWidth,
-    height: windowHeight / 3.2,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    height: windowHeight / 3,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
     position: 'absolute',
     borderBottomColor: '#d6d5ff',
     borderBottomWidth: 1,
@@ -427,7 +484,8 @@ const stylesc = StyleSheet.create({
     color: 'grey',
     fontSize: 10,
     fontFamily: 'Poppins',
-    marginHorizontal:5,
+    // marginHorizontal:5,
+    paddingRight:5
   },
   imageSliderContainer: {
     // flexDirection: 'row',
@@ -446,20 +504,24 @@ const stylesc = StyleSheet.create({
   
   },
   cardContainer: {
-    width : 155,  
-    borderRadius: 10,       
-    backgroundColor:COLORS.white       
+    width : SCREEN_WIDTH/2.2,  
+    borderRadius: 10,    
+    height: SCREEN_HEIGHT/4, 
+    marginBottom:10,  
+    backgroundColor: '#FCFCFC',
+    borderColor:COLORS.icon_background,
+    borderWidth:1,      
   },
   imageContainer: {
     width: '100%',              // Container for the image
-    height: 100,
-    
-    marginBottom: 10,       // Space between image and text
+   
+         // Space between image and text
   },
  
   categoryText: {
-    fontSize: 14,  
-    marginHorizontal:5,
+    fontSize: 15,  
+    // marginHorizontal:5,
+    // marginVertical :5,
     fontFamily:'Poppins'    // Bolder font for emphasis
   },
   bottomModal: {
@@ -485,27 +547,29 @@ const stylesc = StyleSheet.create({
     marginVertical: 10,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FCFCFC',
+    borderColor:COLORS.icon_background,
+    borderWidth:1,
     borderRadius: 10,
     marginHorizontal: 10,
-    width: 140,
+    width: SCREEN_WIDTH/2.3
   },
   categoryImage: {
-    width: 130, // Set width
-    height: 100, // Set height
-    margin:12,
+    width: 148, // Set width
+    height: 95, // Set height
+    margin:7,
     borderRadius:10,
     resizeMode:'cover'
   },
   cardImage: {
     width: '100%',
-    height: 150,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+    height: 170,
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
   },
   cardText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Medium',
+    fontSize: 15,
+    fontFamily: 'Poppins',
   },
  
 });

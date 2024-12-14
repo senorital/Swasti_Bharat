@@ -10,6 +10,7 @@ const Input = ({
   multiline,
   numberOfLines,
   placeholderTextColor = COLORS.grey,
+  placeholderText = 'Poppins',
   isRequired = false,
   onFocus = () => {},
   ...props
@@ -104,9 +105,12 @@ const styles = StyleSheet.create({
   input: {
     flexGrow: 1,
     minHeight: 48,
+    fontSize:13,
+    fontFamily:'Poppins'
   },
   multilineInput: {
     minHeight: 100,
+    fontFamily:'Poppins'
   },
 });
 

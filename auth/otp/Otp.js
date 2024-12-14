@@ -7,7 +7,8 @@ import {
   StatusBar,
   ActivityIndicator,
   ToastAndroid,
-  TouchableOpacity,Dimensions,BackHandler,Image
+  TouchableOpacity,Dimensions,BackHandler,Image,  KeyboardAvoidingView,Platform,
+  ScrollView,
 } from "react-native";
 import {
   widthPercentageToDP as wp,
@@ -25,6 +26,7 @@ import TabNavigator from "../../roles/instructor/components/navigation/TabNaviga
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { RadioButton } from 'react-native-paper'; 
 import { COLORS } from "../../components/constants";
+import Role from "../roles/Role";
 const VerifyOtp = ({ route }) => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
@@ -47,7 +49,6 @@ const VerifyOtp = ({ route }) => {
 
   const { mobileNumber, email, region } = route.params;
 
-const snapPoints = ['45%'];
   const [selectedRole, setSelectedRole] = useState(null); // Track selected role
   const bottomSheetModalRef = React.useRef(null);
 
@@ -68,11 +69,6 @@ const snapPoints = ['45%'];
     sixthInput,
   ];
 
-
-
-  
-  
-
   const handleResend = async () => {
     if (resendAttempts >= 3) {
       ToastAndroid.show("OTP attempts exhausted. Please try again after some time.", ToastAndroid.SHORT);
@@ -83,11 +79,9 @@ const snapPoints = ['45%'];
     setResendLoading(true);
     try {
       let res;
-      if (region === "IN") {
+      
         res = await dispatch(login({ phoneNumber: mobileNumber }));
-      } else {
-        res = await dispatch(loginEmail({ email: email }));
-      }
+     
 
       if (res && res.success) {
         setResendAttempts(resendAttempts + 1);
@@ -172,38 +166,7 @@ const snapPoints = ['45%'];
     bottomSheetModalRef.current.dismiss();
   };
 
-  const handleRoleSelect = async (role) => {
-    try {
-      // Log and set selected role
-      console.log("handleRoleSelect: " + role);
-      const selectedRole = role === "true" ? "Instructor" : "User";
-      setSelectedRole(selectedRole);
-      console.log('Selected Role: ' + selectedRole);
-      
-      // Create role data object
-      const roleData = { isInstructor: role }; // Convert string to boolean
-      console.log("Form Data being sent:", JSON.stringify(roleData, null, 2));
-      
-      // Call API and await response
-      const response = await dispatch(getUserInstructor(roleData)); // Await and store response
-      console.log(response)
-      // Check if response is successful
-      if (response.success) {
-        // Store the role in AsyncStorage
-        await AsyncStorage.setItem("userRole",role);
-        console.log("Role stored in AsyncStorage.");
-        closeBottomSheet(); 
-      }
-      
-     
-      navigation.navigate("appStack", { role: selectedRole });
-  
-    } catch (error) {
-      console.error("Error in handleRoleSelect:", error);
-    }
-  };
-  
-  
+ 
   
    
 
@@ -250,12 +213,12 @@ const snapPoints = ['45%'];
       setLoading(true);
       try {
         let response;
-        if (region === "IN") {
+       
           response = await dispatch(verifyOtp({ phoneNumber: mobileNumber, otp }));
-        } else {
-          console.log("OTP!@# : "+ otp)
-          response = await dispatch(verfiyOtpByEmail({ email: email, otp }));
-        }
+        // } else {
+        //   console.log("OTP!@# : "+ otp)
+        //   response = await dispatch(verfiyOtpByEmail({ email: email, otp }));
+        // }
 
         if (response && response.success) {
           const { authToken, data } = response;
@@ -264,14 +227,23 @@ const snapPoints = ['45%'];
           console.log("data " + JSON.stringify(data.isInstructor))
           // Save auth token and user role in AsyncStorage
           await AsyncStorage.setItem("isLoggedIn", JSON.stringify(true));
+          const userRole = data.isInstructor;
+          await AsyncStorage.setItem("userRole", JSON.stringify(userRole));
+    
+          // Notify the user
+          ToastAndroid.show("OTP Verified Successfully!", ToastAndroid.SHORT);
+    
+          if (userRole === null) {
+            navigation.navigate("Role");
+          } else {
+            // Otherwise, navigate based on user role
+            // await AsyncStorage.getItem("userRole");
+            const userRoleData = await AsyncStorage.getItem("userRole");
 
-        // await AsyncStorage.setItem("userRole", data.isInstructor);
-        ToastAndroid.show("OTP Verified Successfully!", ToastAndroid.SHORT);
-        
-
-        data.isInstructor == null ? (openBottomSheet()) : (navigation.navigate("appStack", { role: (data.isInstructor === true ? 'Instructor' : 'User') }))
-       
-        setOtp1({
+            navigation.navigate("appStack" ,{ role : userRoleData});
+          }
+          
+          setOtp1({
           1: "",
           2: "",
           3: "",
@@ -304,23 +276,30 @@ const snapPoints = ['45%'];
   };
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+    <ScrollView contentContainerStyle={{ flex: 1 }}>
+
     <View style={styles.container}>
       {/* <StatusBar dark backgroundColor="transparent" /> */}
       <View style={{  }}>
       <Image source={require("../../assets/swasti_bharat.png")} style={styles.logo} />
       <View style={styles.centerContent}>
-        {/* <Text style={styles.headerText}>Send OTP Code</Text> */}
-        {region === "IN" ? (
+        {/* <Text style={styles.headerText}>Send OTP Code</Text>
+        {region === "IN" ? ( */}
           <Text style={styles.subHeaderText}>
-            Enter the 6-digit that we have sent via the phone number to&nbsp;
+            Enter the 6-digit OTP that we have sent via the phone number to +91 &nbsp;
             {mobileNumber}
           </Text>
-        ) : (
-          <Text style={styles.subHeaderText}>
-            Enter the 6-digit that we have sent via the email to&nbsp;
+        {/* ) : ( */}
+          {/* <Text style={styles.subHeaderText} numberOfLines={2}
+          ellipsizeMode="tail">
+            Enter the 6-digit OTP that we have sent via the email to&nbsp;
             {email}
           </Text>
-        )}
+        )} */}
       </View>
 
       <View style={{ }}>
@@ -415,56 +394,11 @@ const snapPoints = ['45%'];
         </View>
       </View>
    
-
-      <BottomSheetModal
-          ref={bottomSheetModalRef}
-          index={0}
-          snapPoints={snapPoints}
-          backdropComponent={() => <View style={styles.overlay} />} // Overlay effect
-          enablePanDownToClose={false} // Disable swipe down to close
-          dismissOnBackdropPress={false} // Disable tap on backdrop to close
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>How would you like to get started with Swasti Bharat ?</Text>
-
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => handleRoleSelect("false")}
-            >
-              <View style={styles.radioContainer}>
-                <RadioButton
-                  value="User"
-                  status={selectedRole === "User" ? "checked" : "unchecked"}
-                  onPress={() => handleRoleSelect("false")}
-                  color={COLORS.primary} // Customize the color
-                />
-                <View style={styles.textContainer}>
-                <Text style={styles.cardText}>User</Text>
-                <Text style={styles.subText}>For personal use or individual learning</Text> 
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => handleRoleSelect("true")}
-            >
-              <View style={styles.radioContainer}>
-                <RadioButton
-                  value="Instructor"
-                  status={selectedRole === "Instructor" ? "checked" : "unchecked"}
-                  onPress={() => handleRoleSelect("true")}
-                  color={COLORS.primary} // Customize the color
-                />
-                <View style={styles.textContainer}>
-                <Text style={styles.cardText}>Instructor</Text>
-                <Text style={styles.subText}>For professionals offering courses or guidance</Text> 
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </BottomSheetModal> 
+     
     </View>
+
+    </ScrollView>
+    </KeyboardAvoidingView>
 
 
   );
@@ -497,9 +431,8 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_Medium",
   },
   subHeaderText: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Poppins",
-    fontWeight: "400",
     lineHeight: 24,
   },
   resendContainer: {
@@ -521,6 +454,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     // paddingHorizontal: 20,
     textAlign: "center",
+    marginVertical:11
   },
   termsText: {
     fontFamily: "Poppins",
@@ -609,8 +543,8 @@ const styles = StyleSheet.create({
     lineHeight: 18, // Optional for better readability
   },
   centerContent: {
-    alignItems: "center", // Center text and inputs horizontally
-    marginVertical:20
+    // alignItems: "center", // Center text and inputs horizontally
+    // marginVertical:20
   },
   otpInputContainer: {
     marginVertical: 30,

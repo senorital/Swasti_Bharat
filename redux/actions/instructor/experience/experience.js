@@ -5,6 +5,7 @@ import { ADD_EXPERIENCE,GET_EXPERIENCE,UPDATE_EXPERIENCE,DELETE_EXPERIENCE } fro
 export const addExperience = (experienceInfo) => async (dispatch) => {
   try {
     const response = await api.addExperience(experienceInfo);
+    console.log("experience :" + response)
     dispatch({ type: ADD_EXPERIENCE, payload: response.data });
     return response.data;
   } catch (error) {
@@ -17,7 +18,7 @@ export const getExperience = (id) => async (dispatch) => {
   try {
     const { data } = await api.getExperience(id);
     dispatch({ type: GET_EXPERIENCE, payload: data });
-    // console.log(data)
+    console.log("data :" + data)
     return data;
   } catch (error) {
     console.log(error);

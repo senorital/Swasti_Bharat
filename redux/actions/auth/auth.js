@@ -16,7 +16,11 @@ import {
   REGISTER_EMAIL,LOGIN_EMAIL,
   VERIFY_OTP_EMAIL,
   PROFILE_PIC,
-  GET_USER_INSTRUCTOR
+  GET_USER_INSTRUCTOR,
+  GET_VERSION,
+  ADD_UPDATE_VERSION,
+  UPDATE_AADHAR_VERIFICATION,
+  UPDATE_BANK_VERIFICATION
 } from "../../constants/instructor/actionTypes";
 import { GET_USER } from "../../constants/user/types";
 
@@ -35,6 +39,7 @@ export const login = (userInfo) => async (dispatch) => {
   try {
     const { data } = await api.login(userInfo);
     dispatch({ type: LOGIN, payload: data });
+    console.log("data")
     return data;
   } catch (error) {
     console.log(error);
@@ -91,6 +96,33 @@ export const getUserInstructor = (instructinfo) => async (dispatch) => {
   }
 };
 
+export const addUpdateVersion = (latestVersion) => async (dispatch) => {
+  try {
+    
+    const { data } = await api.addUpdateVersion(latestVersion);
+    dispatch({ type: ADD_UPDATE_VERSION, payload: data });
+    console.log("ADD UPDATE VERSION" + data)
+    return data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
+export const getVersion = () => async (dispatch) => {
+  try {
+    const { data } = await api.getVersion();
+    console.log("data :" + data)
+    dispatch({ type: GET_VERSION, payload: data });
+   
+    return data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
+
 // export const verfiyOtpByEmail = (otpInfo) => async (dispatch) => {
 //   try {
 //     const { data } = await api.verfiyOtpByEmail(otpInfo);
@@ -142,7 +174,7 @@ export const verfiyOtpByEmail = (otpInfo) => async (dispatch) => {
 export const getInstructor = () => async (dispatch) => {
   try {
     const { data } = await api.getInstructor();
-    console.log("data :" + data)
+    console.log("data :" + data.data)
     dispatch({ type: GET_INSTRUCTOR, payload: data });
    
     return data;
@@ -263,6 +295,39 @@ export const getKYC = () => async (dispatch) => {
     throw error;
   }
 };
+
+
+export const updateKYC = (id,formData) => async (dispatch) => {
+  try {
+    console.log("FormData : " + formData)
+    console.log("Id : " + id)
+
+  const response = await api.updateKYC(formData);
+  console.log("resposne :" + response)
+    dispatch({ type: UPDATE_AADHAR_VERIFICATION, payload: response.data });
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
+
+export const updateBankDetails = (id,formData) => async (dispatch) => {
+  try {
+    console.log("FormData : " + formData)
+    console.log("Id : " + id)
+
+  const response = await api.updateBankDetails(formData);
+  console.log("resposne :" + response)
+    dispatch({ type: UPDATE_BANK_VERIFICATION, payload: response.data });
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
 
 
 export const addBankDetails = (formData) => async (dispatch) => {

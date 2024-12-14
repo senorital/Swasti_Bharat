@@ -15,8 +15,7 @@ import {
 } from "react-native";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import MapView, { Marker, Circle } from "react-native-maps";
-import Toast from "react-native-toast-message";
-
+import { Ionicons } from "@expo/vector-icons";
 import { GOOGLE_MAPS_APIKEY } from "../../../../profile/apiKey/index";
 import Header from "../../../../components/header/Header";
 import { Formik } from "formik";
@@ -26,6 +25,8 @@ import { addTutorLocation } from "../../../../redux/actions/instructor/homeTutor
 
 import { useDispatch } from "react-redux";
 import { COLORS, icons } from "../../../../components/constants";
+import { SCREEN_HEIGHT } from "@gorhom/bottom-sheet";
+import { TouchableHighlight } from "react-native-gesture-handler";
 
 const defaultLocation = {
   latitude: 28.6139, // Latitude for New Delhi
@@ -48,6 +49,7 @@ const AddTLocation = ({ navigation, route }) => {
   const [radius, setRadius] = useState(null);
   const [name, setName] = useState("");
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
+  const [validationMessage, setValidationMessage] = useState("");
 
   
   useEffect(() => {
@@ -71,9 +73,10 @@ const AddTLocation = ({ navigation, route }) => {
   };
 
   const handleLocationSelect = (data, details) => {
-    // const locationName=details?.formatted_address;
-    console.log("details.formatted_address :" +details.formatted_address );
     const { lat, lng } = details.geometry.location;
+    const isInIndia = details.formatted_address.includes("India");
+
+     if (isInIndia) {
     setLocation({
       latitude: parseFloat(lat.toFixed(7)),
       longitude: parseFloat(lng.toFixed(7)),
@@ -81,6 +84,12 @@ const AddTLocation = ({ navigation, route }) => {
       longitudeDelta: 0.05,
     });
     setName(details.formatted_address);
+    setValidationMessage("");
+  } else {
+    setValidationMessage("Please select a location within India.");
+    setLocation(defaultLocation);
+    setName("");
+  }
   };
 
   useEffect(() => {
@@ -110,43 +119,88 @@ const AddTLocation = ({ navigation, route }) => {
       <View style={styles.autocompleteContainer}>
         <Text style={styles.label}>Enter Service area Location</Text>
         <GooglePlacesAutocomplete
-          placeholder="Search by location"
-          onPress={handleLocationSelect}
-          query={{
-            key: GOOGLE_MAPS_APIKEY,
-            language: "en",
-          }}
-          fetchDetails={true}
-          textInputProps={{
-            style: {
-              borderColor:  "#000",
-              borderWidth: 1,
-              height: 40,
-              borderRadius: 5,
-              paddingHorizontal: 10,
-              width: "100%",
-            },
-          }}
-          styles={{
-            container: { flex: 0 },
-            listView: { zIndex: 1000 },
-          }}
+  placeholder="Search by location"
+  onPress={handleLocationSelect}
+  query={{
+    key: GOOGLE_MAPS_APIKEY,
+    language: "en",
+  }}
+  fetchDetails={true}
+  renderRow={(rowData) => {
+    const { description } = rowData;
+    return (
+      <View style={styles.row}>
+        <Ionicons
+          name="location-outline"
+          size={20}
+          color="#000"
+          style={styles.locationIcon}
         />
+        <Text style={styles.locationText} numberOfLines={1}>
+          {description}
+        </Text>
+      </View>
+    );
+  }}
+  textInputProps={{
+    value: name, // Bind the current value to the state
+    onChangeText: (text) => setName(text), // Update the state when text changes
+    placeholderTextColor: "#999",
+    style: {
+      fontFamily: "Poppins", // Apply Poppins font to text input
+      borderColor: COLORS.background,
+      borderWidth: 1,
+      borderRadius: 5,
+      backgroundColor: COLORS.background,
+      paddingHorizontal: 10,
+      width: "100%",
+      marginTop: 5,
+      fontSize: 13,
+      paddingVertical: 5,
+    },
+  }}
+  renderLeftButton={() => null} // No left button needed
+  renderRightButton={() =>
+    name ? ( // Conditionally render the clear button if there is text
+      <TouchableHighlight
+        style={styles.clearButton}
+        onPress={() => setName("")} // Clear the input text when pressed
+      >
+        <Ionicons name="close-circle" size={20} />
+      </TouchableHighlight>
+    ) : null
+  }
+  styles={{
+    container: { flex: 0 },
+    listView: { zIndex: 1000 },
+    poweredContainer: {
+      display: "none", // Hide "Powered by Google" container
+    },
+    powered: {
+      display: "none", // Hide "Powered by Google" text
+    },
+  }}
+/>
+
+
+           {validationMessage ? (
+          <Text style={styles.validationText}>{validationMessage}</Text>
+        ) : null}
       </View>
 
-      {location && (
-        <View>
-          <MapView style={styles.map} region={location}>
-            <Marker coordinate={location} />
-            <Circle
-              center={location}
-              radius={radius}
-              fillColor="rgba(135,206,250,0.5)"
-              strokeColor="rgba(135,206,250,1)"
-            />
-          </MapView>
-        </View>
-      )}
+        {location && (
+          <View>
+            <MapView style={styles.map} region={location}>
+              <Marker coordinate={location} />
+              <Circle
+                center={location}
+                radius={radius}
+                fillColor="rgba(135,206,250,0.5)"
+                strokeColor="rgba(135,206,250,1)"
+              />
+            </MapView>
+          </View>
+        )}
       <FlatList
         data={distances}
         keyExtractor={(item) => item.id.toString()}
@@ -175,6 +229,8 @@ const AddTLocation = ({ navigation, route }) => {
         )}
         contentContainerStyle={styles.distanceList}
       />
+        <View style={styles.buttonContainer}>
+
       <Button
         title={
           isSubmitting ? (
@@ -189,6 +245,7 @@ const AddTLocation = ({ navigation, route }) => {
         }
         onPress={handleSubmit}
       />
+      </View>
     </View>
   );
 
@@ -198,7 +255,7 @@ const AddTLocation = ({ navigation, route }) => {
       style={styles.container}
     >
       <StatusBar backgroundColor={COLORS.primary} style="light" />
-      <View style={{ paddingTop: 15 }}>
+      <View style={{ paddingTop: 20 }}>
         <Header title={"Add Service Area Location"} icon={icons.back} />
       </View>
 
@@ -208,23 +265,35 @@ const AddTLocation = ({ navigation, route }) => {
          initialValues={{}}
           onSubmit={(values, { setSubmitting }) => {
             if (!name) {
-              Toast.show({
-                type: "error",
-                text1: "Service area is required",
-                visibilityTime: 2000,
-                autoHide: true,
-              });
+              // Toast.show({
+              //   type: "error",
+              //   text1: "Service area is required",
+              //   visibilityTime: 2000,
+              //   autoHide: true,
+              // });
+              ToastAndroid.show("Service area is required", ToastAndroid.SHORT);
               setSubmitting(false);
               return;
             }
         
+            if (!name.includes("India")) {
+              ToastAndroid.show(
+                "Please select a location within India.",
+                ToastAndroid.SHORT
+              );
+              setSubmitting(false);
+              return;
+            }
+
             if (!radius) {
-              Toast.show({
-                type: "error",
-                text1: "Distance is required",
-                visibilityTime: 2000,
-                autoHide: true,
-              });
+              // Toast.show({
+              //   type: "error",
+              //   text1: "Distance is required",
+              //   visibilityTime: 2000,
+              //   autoHide: true,
+              // });
+              ToastAndroid.show("Distance is required", ToastAndroid.SHORT);
+
               setSubmitting(false);
               return;
             }
@@ -236,16 +305,9 @@ const AddTLocation = ({ navigation, route }) => {
               radius: String(radius),
               unit: "km",
             };
-            console.log(locationData);
             dispatch(addTutorLocation(locationData))
               .then((res) => {
-                console.log(res);
-                // Toast.show({
-                //   type: "success",
-                //   text1: res.message,
-                //   visibilityTime: 2000,
-                //   autoHide: true,
-                // });
+             
                 ToastAndroid.show(res.message,ToastAndroid.SHORT)
 
                 setSubmitting(false);
@@ -253,12 +315,7 @@ const AddTLocation = ({ navigation, route }) => {
               })
               .catch((error) => {
                 console.error("Error adding tutor location:", error);
-                // Toast.show({
-                //   type: "error",
-                //   text1: "An error occurred. Please try again.",
-                //   visibilityTime: 2000,
-                //   autoHide: true,
-                // });
+               
                 ToastAndroid.show('An error occurred. Please try again.',ToastAndroid.SHORT)
 
                 setSubmitting(false);
@@ -277,8 +334,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+  buttonContainer: {
+    position: "absolute", // Positions the button at the bottom
+    bottom: 16, // Space from the bottom
+    left: 16, // Space from the left
+    right: 16, // Space from the right
+  },
   stepContainer: {
-    padding: 20,
+    paddingHorizontal: 20,
+    flex:1
   },
   label: {
     fontSize: 14,
@@ -289,7 +353,7 @@ const styles = StyleSheet.create({
   autocompleteContainer: {
     zIndex: 1,
     width: "100%",
-    marginVertical: 10,
+    // marginVertical: 10,
   },
   map: {
     width: "100%",
@@ -297,13 +361,20 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   distanceButton: {
-    padding: 10,
-    height: 40,
+    height:50,
+    width:68,
     borderRadius: 5,
+    
     marginHorizontal: 5,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
+  },
+  validationText: {
+    color: "red",
+    fontSize: 12,
+    fontFamily:'Poppins',
+    marginTop: 5,
   },
   selectedDistanceButton: {
     backgroundColor: "rgba(102, 42, 178, 1)",
@@ -315,8 +386,33 @@ const styles = StyleSheet.create({
   },
   distanceButtonText: {
     color: "#000",
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: "Poppins",
+  },
+  clearButton: {
+    position: "absolute",
+    right: 10,
+    top: 12,
+    zIndex: 10,
+  },
+  locationText: {
+    fontSize: 13,
+    color: "#000",
+    flex: 1,
+    justifyContent:'center',
+    
+    fontFamily:'Poppins-Medium'
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 2,
+    // marginLeft:-5
+    // paddingHorizontal: 5,
+  },
+  locationIcon: {
+    marginRight: 5,
+    marginLeft:-5
   },
   selectedDistanceButtonText: {
     color: "#fff",
@@ -325,7 +421,7 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   distanceList: {
-    paddingHorizontal: 10,
+    // paddingHorizontal: 10,
     justifyContent: "space-between",
   },
   indicator: {

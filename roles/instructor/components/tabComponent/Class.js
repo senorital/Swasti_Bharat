@@ -96,7 +96,7 @@ const Class = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-    <View style={{paddingTop:15}}>
+    <View style={{}}>
       <Header
         title={"Today's Classes"}
         icon={require("../../../../assets/back.png")}

@@ -3,10 +3,7 @@ import { View, Image, Text, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Badge } from "react-native-elements";
 import Home from "../../components/tabComponent/Home";
-// import Class from "../tabComponent/Class";
-import { useSelector } from "react-redux";
-// import Cart from "../tabComponent/Cart";
-// import Profile from "../tabComponent/Profile";
+
 import HomeIcon from "../../../../assets/nav-icons/home.png";
 import HomeActive from "../../../../assets/nav-icons/homeActive.png";
 import SnagIcon from "../../../../assets/nav-icons/booking.png";
@@ -18,21 +15,13 @@ import UserActive from "../../../../assets/nav-icons/profileActive.png";
 import Profile from "../tabComponent/Profile";
 import BookingTab from "../booking/BookingTab";
 import HomeTutorBooking from "../booking/HomeTutorBooking";
-// import LiveClasses from "../liveClasses/LiveClasses";
-// import MainBooking from "../booking/MainBooking";
 import Notification from "../notification/Notification";
 
 const Tab = createBottomTabNavigator();
 
 const TabNavigator = () => {
-  // Example state for unread messages
-  // const [unreadMessages, setUnreadMessages] = useState(10); // Replace with your logic to fetch unread messages
-  // const { notifications, unViewedNotification } = useSelector((state) => state.notification);
+  
 
-  useEffect(() => {
-    // Fetch the unread messages count from your backend or context/state management
-    // setUnreadMessages(fetchUnreadMessagesCount());
-  }, []);
 
   return (
     <View style={{ backgroundColor: '#fff', flex: 1 }}>
